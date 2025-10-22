@@ -64,18 +64,21 @@ export const pluginService = {
   },
 
   // 获取特色插件
-  getFeaturedPlugins: (limit: number = 8): Promise<Plugin[]> => {
-    return request.get('/plugins', { params: { featured: true, limit } });
+  getFeaturedPlugins: async (limit: number = 8): Promise<Plugin[]> => {
+    const response = await request.get('/plugins', { params: { featured: true, limit } });
+    return response.data || [];
   },
 
   // 获取最新插件
-  getLatestPlugins: (limit: number = 8): Promise<Plugin[]> => {
-    return request.get('/plugins', { params: { sort: 'latest', limit } });
+  getLatestPlugins: async (limit: number = 8): Promise<Plugin[]> => {
+    const response = await request.get('/plugins', { params: { sort: 'latest', limit } });
+    return response.data || [];
   },
 
   // 获取分类列表
-  getCategories: (): Promise<Category[]> => {
-    return request.get('/categories');
+  getCategories: async (): Promise<Category[]> => {
+    const response = await request.get('/categories');
+    return response.data || [];
   },
 
   // 获取插件详情
@@ -95,37 +98,37 @@ export const pluginService = {
 
   // 获取扩展插件列表
   getExtendedPlugins: (params: GetPluginsParams): Promise<PaginatedResponse<Plugin>> => {
-    return request.get('/extended-plugins', { params });
+    return request.get('/marketplace/plugins', { params });
   },
 
   // 搜索扩展插件
   searchExtendedPlugins: (keyword: string): Promise<Plugin[]> => {
-    return request.get('/extended-plugins/search', { params: { keyword } });
+    return request.get('/marketplace/plugins/search', { params: { keyword } });
   },
 
   // 下载扩展插件
   downloadExtendedPlugin: (id: string): Promise<{ message: string }> => {
-    return request.post(`/extended-plugins/${id}/download`);
+    return request.post(`/marketplace/plugins/${id}/download`);
   },
 
   // 安装扩展插件
   installExtendedPlugin: (id: string): Promise<{ message: string }> => {
-    return request.post(`/extended-plugins/${id}/install`);
+    return request.post(`/marketplace/plugins/${id}/install`);
   },
 
   // 更新扩展插件
   updateExtendedPlugin: (id: string): Promise<{ message: string }> => {
-    return request.post(`/extended-plugins/${id}/update`);
+    return request.post(`/marketplace/plugins/${id}/update`);
   },
 
   // 获取用户收藏的扩展插件
   getFavoritePlugins: (): Promise<Plugin[]> => {
-    return request.get('/extended-plugins/favorites');
+    return request.get('/marketplace/plugins/favorites');
   },
 
   // 获取扩展插件统计信息
   getExtendedPluginStats: (): Promise<{ total: number, installed: number, updated: number }> => {
-    return request.get('/extended-plugins/stats');
+    return request.get('/marketplace/plugins/stats');
   },
 };
 

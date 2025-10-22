@@ -122,6 +122,12 @@ func SetupRoutes(
 			auth.GET("/profile", authHandler.GetProfile)
 		}
 
+		// 用户信息路由别名（兼容前端调用）
+		user := protected.Group("/user")
+		{
+			user.GET("/profile", authHandler.GetProfile)
+		}
+
 		// 权限检查和同步 - 所有认证用户都可以访问
 		permissions := protected.Group("/permissions")
 		if groupUserRateLimiter != nil {
@@ -550,5 +556,20 @@ func SetupRoutes(
 		pluginsMarketplaceAlias.GET("/:id", pluginHandler.GetPlugin)
 		pluginsMarketplaceAlias.GET("/:id/reviews", reviewHandler.GetPluginReviews)
 	}
+
+	// 插件API路由别名（兼容前端调用）
+	plugins := api.Group("/plugins")
+	{
+		plugins.GET("/", pluginHandler.GetPlugins)
+		plugins.GET("/:id", pluginHandler.GetPlugin)
+		plugins.GET("/:id/reviews", reviewHandler.GetPluginReviews)
+	}
+
+	// 分类API路由别名（兼容前端调用）
+	categories := api.Group("/categories")
+	{
+		categories.GET("/", categoryHandler.GetCategories)
+	}
+
 	return r
 }
