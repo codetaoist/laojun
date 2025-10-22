@@ -1,0 +1,66 @@
+# 构建输出
+/build/
+/dist/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# 测试输出
+*.test
+*.out
+coverage.txt
+
+# 依赖目录
+vendor/
+node_modules/
+
+# 环境文件
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+tmp/
+temp/
+.tmp/
+
+# IDE 文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# Go 模块缓存
+go.sum
+
+# 旧的迁移目录
+20251021/
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 备份文件
+*.bak
+*.backup
+
+# 证书文件
+*.pem
+*.key
+*.crt
+
+# Docker 相关
+.dockerignorecmd/*/*.exe

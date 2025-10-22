@@ -1,0 +1,167 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: laojun-app
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+# Namespace for all resources
+namespace: laojun
+
+# Common labels applied to all resources
+commonLabels:
+  app.kubernetes.io/name: laojun
+  app.kubernetes.io/version: v1.0.0
+  app.kubernetes.io/component: backend
+  app.kubernetes.io/part-of: laojun-platform
+  app.kubernetes.io/managed-by: kustomize
+
+# Common annotations applied to all resources
+commonAnnotations:
+  config.kubernetes.io/origin: |
+    path: k8s/kustomization.yaml
+  contact: admin@laojun.com
+  documentation: https://docs.laojun.com
+
+# Resources to include
+resources:
+- namespace.yaml
+- deployment.yaml
+- postgres.yaml
+- redis.yaml
+- monitoring.yaml
+
+# Images to replace
+images:
+- name: laojun/app
+  newName: registry.example.com/laojun/app
+  newTag: v1.0.0
+
+# ConfigMap generator
+configMapGenerator:
+- name: app-env-config
+  literals:
+  - ENV=production
+  - LOG_LEVEL=info
+  - METRICS_ENABLED=true
+  - TRACING_ENABLED=true
+- name: build-info
+  literals:
+  - BUILD_VERSION=v1.0.0
+  - BUILD_DATE=2024-01-01T00:00:00Z
+  - GIT_COMMIT=abc123def456
+  - GIT_BRANCH=main
+
+# Secret generator
+secretGenerator:
+- name: app-secrets
+  literals:
+  - DATABASE_URL=postgresql://laojun:laojun_password@postgres-service:5432/laojun?sslmode=disable
+  - REDIS_URL=redis://:redis_password@redis-service:6379/0
+  - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+  - ENCRYPTION_KEY=32-byte-encryption-key-change-this
+  type: Opaque
+
+# Patches to apply
+patches:
+- target:
+    kind: Deployment
+    name: laojun-app
+  patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 3
+    - op: add
+      path: /spec/template/metadata/annotations/deployment.kubernetes.io~1revision
+      value: "1"
+
+# Strategic merge patches
+patchesStrategicMerge:
+- |-
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: laojun-app
+  spec:
+    template:
+      spec:
+        containers:
+        - name: app
+          env:
+          - name: DEPLOYMENT_ENV
+            value: "production"
+          - name: KUSTOMIZE_BUILD
+            value: "true"
+
+# JSON patches
+patchesJson6902:
+- target:
+    version: v1
+    kind: Service
+    name: laojun-app-service
+  patch: |-
+    - op: add
+      path: /metadata/annotations/service.beta.kubernetes.io~1aws-load-balancer-type
+      value: nlb
+
+# Replacements
+replacements:
+- source:
+    kind: ConfigMap
+    name: build-info
+    fieldPath: data.BUILD_VERSION
+  targets:
+  - select:
+      kind: Deployment
+      name: laojun-app
+    fieldPaths:
+    - spec.template.metadata.labels.version
+
+# Generators
+generators:
+- |-
+  apiVersion: builtin
+  kind: ConfigMapGenerator
+  metadata:
+    name: runtime-config
+  literals:
+  - RUNTIME_ENV=kubernetes
+  - ORCHESTRATOR=kustomize
+
+# Transformers
+transformers:
+- |-
+  apiVersion: builtin
+  kind: NamespaceTransformer
+  metadata:
+    name: namespace-transformer
+  namespace: laojun
+  setRoleBindingSubjects: allServiceAccounts
+  unsetOnly: false
+  fieldSpecs:
+  - path: metadata/namespace
+    create: true
+
+# Validators
+validators:
+- |-
+  apiVersion: builtin
+  kind: KubernetesValidatorPlugin
+  metadata:
+    name: kubernetes-validator
+  strict: true
+  openAPIPath: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/swagger.json
+
+# Build metadata
+buildMetadata:
+- originAnnotations
+- transformerAnnotations
+- managedByLabel
+
+# Inventory
+inventory:
+  type: ConfigMap
+  configMap:
+    name: inventory
+    namespace: laojun

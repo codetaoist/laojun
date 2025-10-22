@@ -1,0 +1,520 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: laojun
+  labels:
+    app: redis
+    component: cache
+spec:
+  serviceName: redis-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+      component: cache
+  template:
+    metadata:
+      labels:
+        app: redis
+        component: cache
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9121"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+          name: redis
+        command:
+        - redis-server
+        - /etc/redis/redis.conf
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-secret
+              key: password
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - --no-auth-warning
+            - -a
+            - $(REDIS_PASSWORD)
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - --no-auth-warning
+            - -a
+            - $(REDIS_PASSWORD)
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: redis-storage
+          mountPath: /data
+        - name: redis-config
+          mountPath: /etc/redis
+      - name: redis-exporter
+        image: oliver006/redis_exporter:latest
+        ports:
+        - containerPort: 9121
+          name: metrics
+        env:
+        - name: REDIS_ADDR
+          value: "redis://localhost:6379"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-secret
+              key: password
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "25m"
+          limits:
+            memory: "64Mi"
+            cpu: "50m"
+      volumes:
+      - name: redis-config
+        configMap:
+          name: redis-config
+  volumeClaimTemplates:
+  - metadata:
+      name: redis-storage
+      labels:
+        app: redis
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: fast-ssd
+      resources:
+        requests:
+          storage: 10Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: laojun
+  labels:
+    app: redis
+    component: cache
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+    name: redis
+  selector:
+    app: redis
+    component: cache
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-metrics
+  namespace: laojun
+  labels:
+    app: redis
+    component: metrics
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9121"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9121
+    targetPort: 9121
+    protocol: TCP
+    name: metrics
+  selector:
+    app: redis
+    component: cache
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: laojun
+  labels:
+    app: redis
+data:
+  redis.conf: |
+    # Network
+    bind 0.0.0.0
+    port 6379
+    protected-mode yes
+    
+    # General
+    daemonize no
+    pidfile /var/run/redis_6379.pid
+    loglevel notice
+    logfile ""
+    databases 16
+    
+    # Security
+    requirepass ${REDIS_PASSWORD}
+    
+    # Persistence
+    save 900 1
+    save 300 10
+    save 60 10000
+    stop-writes-on-bgsave-error yes
+    rdbcompression yes
+    rdbchecksum yes
+    dbfilename dump.rdb
+    dir /data
+    
+    # AOF
+    appendonly yes
+    appendfilename "appendonly.aof"
+    appendfsync everysec
+    no-appendfsync-on-rewrite no
+    auto-aof-rewrite-percentage 100
+    auto-aof-rewrite-min-size 64mb
+    aof-load-truncated yes
+    aof-use-rdb-preamble yes
+    
+    # Memory Management
+    maxmemory 400mb
+    maxmemory-policy allkeys-lru
+    maxmemory-samples 5
+    
+    # Lazy Freeing
+    lazyfree-lazy-eviction yes
+    lazyfree-lazy-expire yes
+    lazyfree-lazy-server-del yes
+    replica-lazy-flush yes
+    
+    # Threaded I/O
+    io-threads 2
+    io-threads-do-reads yes
+    
+    # Slow Log
+    slowlog-log-slower-than 10000
+    slowlog-max-len 128
+    
+    # Latency Monitoring
+    latency-monitor-threshold 100
+    
+    # Client Output Buffer Limits
+    client-output-buffer-limit normal 0 0 0
+    client-output-buffer-limit replica 256mb 64mb 60
+    client-output-buffer-limit pubsub 32mb 8mb 60
+    
+    # Client Query Buffer Limit
+    client-query-buffer-limit 1gb
+    
+    # Protocol Max Bulk Length
+    proto-max-bulk-len 512mb
+    
+    # HyperLogLog
+    hll-sparse-max-bytes 3000
+    
+    # Streams
+    stream-node-max-bytes 4096
+    stream-node-max-entries 100
+    
+    # Active Rehashing
+    activerehashing yes
+    
+    # Client Timeouts
+    timeout 0
+    tcp-keepalive 300
+    
+    # TCP Listen Backlog
+    tcp-backlog 511
+    
+    # Unix Socket
+    # unixsocket /tmp/redis.sock
+    # unixsocketperm 700
+    
+    # Disable Commands (for security)
+    rename-command FLUSHDB ""
+    rename-command FLUSHALL ""
+    rename-command KEYS ""
+    rename-command CONFIG "CONFIG_b835c3f8a5c2e3d7"
+    rename-command DEBUG ""
+    rename-command EVAL ""
+    rename-command SHUTDOWN "SHUTDOWN_b835c3f8a5c2e3d7"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-sentinel
+  namespace: laojun
+  labels:
+    app: redis-sentinel
+    component: sentinel
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: redis-sentinel
+      component: sentinel
+  template:
+    metadata:
+      labels:
+        app: redis-sentinel
+        component: sentinel
+    spec:
+      containers:
+      - name: sentinel
+        image: redis:7-alpine
+        ports:
+        - containerPort: 26379
+          name: sentinel
+        command:
+        - redis-sentinel
+        - /etc/redis-sentinel/sentinel.conf
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-secret
+              key: password
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        volumeMounts:
+        - name: sentinel-config
+          mountPath: /etc/redis-sentinel
+      volumes:
+      - name: sentinel-config
+        configMap:
+          name: redis-sentinel-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-sentinel-service
+  namespace: laojun
+  labels:
+    app: redis-sentinel
+    component: sentinel
+spec:
+  type: ClusterIP
+  ports:
+  - port: 26379
+    targetPort: 26379
+    protocol: TCP
+    name: sentinel
+  selector:
+    app: redis-sentinel
+    component: sentinel
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-sentinel-config
+  namespace: laojun
+  labels:
+    app: redis-sentinel
+data:
+  sentinel.conf: |
+    # Sentinel Configuration
+    port 26379
+    bind 0.0.0.0
+    
+    # Monitor Redis Master
+    sentinel monitor mymaster redis-service 6379 2
+    sentinel auth-pass mymaster ${REDIS_PASSWORD}
+    
+    # Timeouts
+    sentinel down-after-milliseconds mymaster 5000
+    sentinel parallel-syncs mymaster 1
+    sentinel failover-timeout mymaster 10000
+    
+    # Notification Scripts
+    # sentinel notification-script mymaster /var/redis/notify.sh
+    # sentinel client-reconfig-script mymaster /var/redis/reconfig.sh
+    
+    # Logging
+    logfile ""
+    loglevel notice
+    
+    # Security
+    requirepass ${REDIS_PASSWORD}
+    
+    # Deny Dangerous Commands
+    sentinel deny-scripts-reconfig yes
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: redis-backup
+  namespace: laojun
+  labels:
+    app: redis
+    component: backup
+spec:
+  schedule: "0 3 * * *"  # Daily at 3 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: redis-backup
+            image: redis:7-alpine
+            command:
+            - /bin/sh
+            - -c
+            - |
+              BACKUP_DIR="/backup"
+              TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+              BACKUP_FILE="$BACKUP_DIR/redis_backup_$TIMESTAMP.rdb"
+              
+              # Create backup directory
+              mkdir -p $BACKUP_DIR
+              
+              # Trigger Redis save
+              redis-cli -h redis-service -p 6379 -a $REDIS_PASSWORD BGSAVE
+              
+              # Wait for backup to complete
+              while [ $(redis-cli -h redis-service -p 6379 -a $REDIS_PASSWORD LASTSAVE) -eq $(redis-cli -h redis-service -p 6379 -a $REDIS_PASSWORD LASTSAVE) ]; do
+                sleep 1
+              done
+              
+              # Copy RDB file
+              redis-cli -h redis-service -p 6379 -a $REDIS_PASSWORD --rdb $BACKUP_FILE
+              
+              # Compress backup
+              gzip $BACKUP_FILE
+              
+              # Remove old backups (keep last 7 days)
+              find $BACKUP_DIR -name "*.rdb.gz" -mtime +7 -delete
+              
+              echo "Redis backup completed: $BACKUP_FILE.gz"
+            env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: password
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backup
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: redis-backup-pvc
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-backup-pvc
+  namespace: laojun
+  labels:
+    app: redis
+    component: backup
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-scripts
+  namespace: laojun
+  labels:
+    app: redis
+data:
+  health-check.sh: |
+    #!/bin/sh
+    redis-cli -h redis-service -p 6379 -a $REDIS_PASSWORD ping
+  
+  memory-usage.sh: |
+    #!/bin/sh
+    redis-cli -h redis-service -p 6379 -a $REDIS_PASSWORD info memory | grep used_memory_human
+  
+  slow-log.sh: |
+    #!/bin/sh
+    redis-cli -h redis-service -p 6379 -a $REDIS_PASSWORD slowlog get 10
+  
+  client-list.sh: |
+    #!/bin/sh
+    redis-cli -h redis-service -p 6379 -a $REDIS_PASSWORD client list
+  
+  keyspace-info.sh: |
+    #!/bin/sh
+    redis-cli -h redis-service -p 6379 -a $REDIS_PASSWORD info keyspace
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-network-policy
+  namespace: laojun
+  labels:
+    app: redis
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: laojun
+    - podSelector:
+        matchLabels:
+          app: redis-sentinel
+    ports:
+    - protocol: TCP
+      port: 6379
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53

@@ -1,0 +1,167 @@
+{
+  "id": "hello-js-plugin",
+  "name": "Hello JavaScript Plugin",
+  "version": "1.0.0",
+  "description": "A simple Hello World plugin written in JavaScript",
+  "type": "filter",
+  "runtime": "js",
+  "author": "Taishanglaojun Team",
+  "license": "MIT",
+  "homepage": "https://github.com/taishanglaojun/plugins/hello-js-plugin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/taishanglaojun/plugins.git"
+  },
+  "keywords": ["hello", "example", "javascript", "demo"],
+  "main": "hello_plugin.js",
+  "dependencies": [],
+  "permissions": [
+    "network.http",
+    "console.log"
+  ],
+  "config": {
+    "schema": {
+      "type": "object",
+      "properties": {
+        "greeting": {
+          "type": "string",
+          "default": "Hello",
+          "description": "The greeting message to use"
+        },
+        "language": {
+          "type": "string",
+          "default": "en",
+          "enum": ["en", "zh", "es", "fr", "de"],
+          "description": "The language for responses"
+        },
+        "enable_stats": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to include statistics in responses"
+        },
+        "max_requests": {
+          "type": "integer",
+          "default": 1000,
+          "minimum": 1,
+          "description": "Maximum number of requests to handle"
+        }
+      },
+      "required": ["greeting", "language"]
+    },
+    "default": {
+      "greeting": "Hello",
+      "language": "en",
+      "enable_stats": false,
+      "max_requests": 1000
+    }
+  },
+  "capabilities": [
+    "request_handling",
+    "event_handling",
+    "health_check",
+    "calculation",
+    "configuration"
+  ],
+  "api": {
+    "version": "1.0",
+    "endpoints": [
+      {
+        "name": "handleRequest",
+        "description": "Process incoming requests",
+        "input": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Name to greet"
+            },
+            "include_stats": {
+              "type": "boolean",
+              "description": "Include plugin statistics in response"
+            },
+            "calculate": {
+              "type": "object",
+              "properties": {
+                "operation": {
+                  "type": "string",
+                  "enum": ["add", "subtract", "multiply", "divide"]
+                },
+                "a": {"type": "number"},
+                "b": {"type": "number"}
+              }
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "success": {"type": "boolean"},
+            "data": {"type": "object"},
+            "message": {"type": "string"}
+          }
+        }
+      }
+    ],
+    "events": [
+      {
+        "name": "system.startup",
+        "description": "System startup event"
+      },
+      {
+        "name": "plugin.loaded",
+        "description": "Another plugin was loaded"
+      },
+      {
+        "name": "config.updated",
+        "description": "Configuration was updated"
+      }
+    ]
+  },
+  "resources": {
+    "memory": {
+      "max": "50MB",
+      "warning": "30MB"
+    },
+    "cpu": {
+      "max": "10%",
+      "warning": "5%"
+    },
+    "network": {
+      "max_connections": 10,
+      "max_bandwidth": "1MB/s"
+    }
+  },
+  "security": {
+    "sandbox": true,
+    "network_access": "restricted",
+    "file_access": "none",
+    "system_access": "none"
+  },
+  "monitoring": {
+    "health_check_interval": "30s",
+    "metrics": [
+      "request_count",
+      "response_time",
+      "error_rate",
+      "memory_usage"
+    ]
+  },
+  "documentation": {
+    "readme": "README.md",
+    "api_docs": "docs/api.md",
+    "examples": "examples/",
+    "changelog": "CHANGELOG.md"
+  },
+  "build": {
+    "created_at": "2024-01-01T00:00:00Z",
+    "build_number": "1",
+    "commit_hash": "abc123def456",
+    "build_environment": "production"
+  },
+  "compatibility": {
+    "min_system_version": "1.0.0",
+    "max_system_version": "2.0.0",
+    "supported_platforms": ["linux", "windows", "darwin"],
+    "supported_architectures": ["amd64", "arm64"]
+  }
+}

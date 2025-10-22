@@ -1,0 +1,111 @@
+/* 论坛页面样式 */
+.forum-page {
+  padding: 24px;
+}
+
+/* 移动端和桌面端显示控制 */
+.desktop-only {
+  display: block;
+}
+
+.mobile-only {
+  display: none;
+}
+
+/* 移动端样式 */
+@media (max-width: 768px) {
+  .forum-page {
+    padding: 16px;
+  }
+
+  .desktop-only {
+    display: none;
+  }
+
+  .mobile-only {
+    display: block;
+  }
+
+  /* 帖子列表项移动端优化 */
+  .forum-page .ant-list-item {
+    padding: 16px 0;
+  }
+
+  .forum-page .ant-list-item-meta-title {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .forum-page .ant-list-item-meta-description {
+    font-size: 12px;
+  }
+
+  .forum-page .ant-list-item-action {
+    margin-left: 0;
+  }
+
+  .forum-page .ant-list-item-action > li {
+    padding: 0 4px;
+  }
+
+  /* 头像在移动端稍小 */
+  .forum-page .ant-avatar {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  /* 标签在移动端更紧凑 */
+  .forum-page .ant-tag {
+    font-size: 11px;
+    padding: 0 4px;
+    margin: 0 2px;
+  }
+
+  /* 分页在移动端简化 */
+  .forum-page .ant-pagination {
+    text-align: center;
+  }
+
+  .forum-page .ant-pagination-options {
+    display: none;
+  }
+}
+
+/* 中等屏幕优化 */
+@media (max-width: 992px) and (min-width: 769px) {
+  .forum-page {
+    padding: 20px;
+  }
+
+  .forum-page .ant-list-item-meta-title {
+    font-size: 15px;
+  }
+}
+
+/* 大屏幕优化 */
+@media (min-width: 1200px) {
+  .forum-page {
+    padding: 32px;
+  }
+}
+
+/* 深色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .forum-page .ant-card {
+    background-color: #1f1f1f;
+    border-color: #434343;
+  }
+
+  .forum-page .ant-list-item {
+    border-bottom-color: #434343;
+  }
+
+  .forum-page .ant-drawer-content {
+    background-color: #1f1f1f;
+  }
+
+  .forum-page .ant-drawer-header {
+    background-color: #1f1f1f;
+    border-bottom-color: #434343;
+  }
+}

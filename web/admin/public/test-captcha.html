@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>验证码测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .captcha-container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .captcha-image {
+            border: 2px solid #333;
+            margin: 10px 0;
+        }
+        button {
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #40a9ff;
+        }
+        .info {
+            background: #f6f8fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>验证码显示测试</h1>
+    
+    <div class="captcha-container">
+        <h3>当前验证码：</h3>
+        <img id="captchaImage" class="captcha-image" alt="验证码" style="width: 120px; height: 40px;">
+        <br>
+        <button onclick="loadCaptcha()">刷新验证码</button>
+        
+        <div class="info">
+            <strong>验证码信息：</strong>
+            <div id="captchaInfo">点击"刷新验证码"按钮加载验证码</div>
+        </div>
+    </div>
+
+    <script>
+        async function loadCaptcha() {
+            try {
+                const response = await fetch('http://localhost:8080/api/v1/auth/captcha');
+                const data = await response.json();
+                
+                console.log('API 响应:', data);
+                
+                if (data.success && data.data) {
+                    const { image, key } = data.data;
+                    
+                    // 显示验证码图片
+                    document.getElementById('captchaImage').src = image;
+                    
+                    // 显示验证码信息
+                    document.getElementById('captchaInfo').innerHTML = `
+                        <strong>Key:</strong> ${key}<br>
+                        <strong>Image Data:</strong> ${image.substring(0, 50)}...<br>
+                        <strong>Image Length:</strong> ${image.length} 字符
+                    `;
+                } else {
+                    document.getElementById('captchaInfo').innerHTML = '获取验证码失败: ' + JSON.stringify(data);
+                }
+            } catch (error) {
+                console.error('获取验证码失败:', error);
+                document.getElementById('captchaInfo').innerHTML = '获取验证码失败: ' + error.message;
+            }
+        }
+        
+        // 页面加载时自动获取验证码
+        window.onload = loadCaptcha;
+    </script>
+</body>
+</html>

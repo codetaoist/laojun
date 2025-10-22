@@ -1,0 +1,283 @@
+.menu-tree-container {
+  .menu-tree-toolbar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    align-items: center;
+    
+    .ant-input-search {
+      max-width: 300px;
+    }
+  }
+  
+  .menu-tree-content {
+    .ant-tree {
+      .ant-tree-node-content-wrapper {
+        width: 100%;
+        padding: 0;
+        
+        &:hover {
+          background-color: transparent;
+        }
+      }
+      
+      .ant-tree-title {
+        width: 100%;
+      }
+    }
+  }
+}
+
+.menu-tree-node {
+  position: relative;
+  
+  &.dragging {
+    opacity: 0.5;
+  }
+  
+  &.drop-over {
+    .drop-indicator {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background-color: #1890ff;
+      z-index: 10;
+      
+      &.before {
+        top: -1px;
+      }
+      
+      &.after {
+        bottom: -1px;
+      }
+      
+      &.inside {
+        top: 50%;
+        transform: translateY(-50%);
+        height: 100%;
+        background-color: rgba(24, 144, 255, 0.1);
+        border: 2px dashed #1890ff;
+      }
+    }
+  }
+}
+
+.menu-tree-node-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: #f5f5f5;
+    
+    .menu-actions {
+      opacity: 1;
+    }
+    
+    .drag-handle {
+      opacity: 1;
+    }
+  }
+  
+  .menu-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    
+    .drag-handle {
+      color: #bfbfbf;
+      cursor: move;
+      opacity: 0;
+      transition: opacity 0.2s;
+      
+      &:hover {
+        color: #1890ff;
+      }
+    }
+    
+    .menu-icon {
+      display: flex;
+      align-items: center;
+      font-size: 16px;
+      color: #666;
+    }
+    
+    .menu-title {
+      font-weight: 500;
+      color: #262626;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .menu-tags {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+      
+      .favorite-icon {
+        color: #faad14;
+        cursor: pointer;
+        transition: all 0.2s;
+        
+        &:hover {
+          color: #fa8c16;
+          transform: scale(1.1);
+        }
+        
+        &.active {
+          color: #fa8c16;
+        }
+      }
+      
+      .ant-tag {
+        margin: 0;
+        border-radius: 10px;
+        font-size: 11px;
+        line-height: 16px;
+        padding: 0 6px;
+      }
+    }
+  }
+  
+  .menu-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    
+    .ant-btn {
+      border: none;
+      box-shadow: none;
+      
+      &.favorite-active {
+        color: #fa8c16;
+      }
+      
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.04);
+      }
+    }
+  }
+}
+
+// 深度层级样式
+.menu-tree-node-title {
+  &[data-level="0"] {
+    font-weight: 600;
+    
+    .menu-title {
+      font-size: 14px;
+    }
+  }
+  
+  &[data-level="1"] {
+    margin-left: 20px;
+    
+    .menu-title {
+      font-size: 13px;
+    }
+  }
+  
+  &[data-level="2"] {
+    margin-left: 40px;
+    
+    .menu-title {
+      font-size: 12px;
+      color: #595959;
+    }
+  }
+  
+  &[data-level="3"] {
+    margin-left: 60px;
+    
+    .menu-title {
+      font-size: 12px;
+      color: #8c8c8c;
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .menu-tree-container {
+    .menu-tree-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+      
+      .ant-input-search {
+        max-width: none;
+      }
+    }
+  }
+  
+  .menu-tree-node-title {
+    padding: 6px 8px;
+    
+    .menu-info {
+      gap: 6px;
+      
+      .menu-title {
+        font-size: 13px;
+      }
+      
+      .menu-tags {
+        .ant-tag {
+          font-size: 10px;
+          padding: 0 4px;
+        }
+      }
+    }
+    
+    .menu-actions {
+      .ant-btn {
+        padding: 0 4px;
+      }
+    }
+  }
+}
+
+// 暗色主题支持
+.dark {
+  .menu-tree-node-title {
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+    
+    .menu-info {
+      .menu-title {
+        color: rgba(255, 255, 255, 0.85);
+      }
+      
+      .menu-icon {
+        color: rgba(255, 255, 255, 0.65);
+      }
+    }
+    
+    .menu-actions {
+      .ant-btn {
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.08);
+        }
+      }
+    }
+  }
+  
+  .menu-tree-node {
+    &.drop-over {
+      .drop-indicator {
+        &.inside {
+          background-color: rgba(24, 144, 255, 0.2);
+        }
+      }
+    }
+  }
+}

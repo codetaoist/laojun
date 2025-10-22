@@ -1,0 +1,302 @@
+openapi: 3.0.3
+info:
+  title: Laojun Platform API
+  description: 太上老君平台API文档
+  version: 1.0.0
+  contact:
+    name: Laojun Team
+    email: support@laojun.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: 开发环境
+  - url: https://api.laojun.com
+    description: 生产环境
+
+paths:
+  /health:
+    get:
+      summary: 健康检查
+      tags:
+        - Health
+      responses:
+        '200':
+          description: 服务正常
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/v1/users:
+    get:
+      summary: 获取用户列表
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: 用户列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+
+  /api/v1/plugins:
+    get:
+      summary: 获取插件列表
+      tags:
+        - Plugins
+      responses:
+        '200':
+          description: 插件列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Plugin'
+  /api/v1/marketplace/plugins:
+    get:
+      summary: 获取插件市场列表
+      tags:
+        - Marketplace
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [name, downloads, rating, updated]
+      responses:
+        '200':
+          description: 插件市场列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Plugin'
+  /api/v1/marketplace/plugins/{id}:
+    get:
+      summary: 获取插件市场详情
+      tags:
+        - Marketplace
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 插件详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plugin'
+  /api/v1/marketplace/plugins/{id}/reviews:
+    get:
+      summary: 获取插件评论
+      tags:
+        - Marketplace
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 评论列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+  /api/v1/marketplace/categories:
+    get:
+      summary: 获取插件分类
+      tags:
+        - Marketplace
+      responses:
+        '200':
+          description: 分类列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+
+  # 兼容别名：与前端 /api/v1/plugins/marketplace 对齐
+  /api/v1/plugins/marketplace:
+    get:
+      summary: 获取插件市场列表（兼容）
+      tags:
+        - Marketplace
+      responses:
+        '200':
+          description: 插件市场列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Plugin'
+  /api/v1/plugins/marketplace/{id}:
+    get:
+      summary: 获取插件市场详情（兼容）
+      tags:
+        - Marketplace
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 插件详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plugin'
+  /api/v1/plugins/marketplace/{id}/reviews:
+    get:
+      summary: 获取插件评论（兼容）
+      tags:
+        - Marketplace
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 评论列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+
+components:
+  schemas:
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+        plugin_id:
+          type: string
+        user_id:
+          type: string
+        rating:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        is_verified:
+          type: boolean
+        helpful_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Plugin:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+        author:
+          type: string
+        created_at:
+          type: string
+          format: date-time

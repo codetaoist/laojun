@@ -1,0 +1,308 @@
+.device-config-modal {
+  .ant-modal-body {
+    padding: 16px;
+    max-height: 70vh;
+    overflow: hidden;
+  }
+  
+  .ant-modal-footer {
+    border-top: 1px solid #f0f0f0;
+    padding: 16px 24px;
+  }
+}
+
+.device-config {
+  height: 100%;
+  
+  .device-tabs {
+    height: 100%;
+    
+    .ant-tabs-content-holder {
+      height: 100%;
+      overflow-y: auto;
+    }
+    
+    .ant-tabs-tab {
+      padding: 12px 16px;
+      margin: 0;
+      border-radius: 0;
+      
+      &.ant-tabs-tab-active {
+        background-color: #e6f7ff;
+        border-right: 3px solid #1890ff;
+        
+        .ant-tabs-tab-btn {
+          color: #1890ff;
+          font-weight: 500;
+        }
+      }
+      
+      .ant-tabs-tab-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        
+        .anticon {
+          font-size: 16px;
+        }
+        
+        .ant-badge {
+          .ant-badge-status-dot {
+            width: 8px;
+            height: 8px;
+          }
+        }
+      }
+    }
+    
+    .ant-tabs-left-bar {
+      width: 160px;
+      border-right: 1px solid #f0f0f0;
+      
+      .ant-tabs-nav-wrap {
+        padding: 8px 0;
+      }
+    }
+    
+    .ant-tabs-left-content {
+      padding-left: 24px;
+    }
+  }
+}
+
+.device-config-content {
+  .ant-alert {
+    border-radius: 6px;
+    
+    .ant-alert-message {
+      font-size: 13px;
+      line-height: 1.4;
+    }
+  }
+  
+  .ant-form {
+    .ant-form-item {
+      margin-bottom: 16px;
+      
+      .ant-form-item-label {
+        padding-bottom: 4px;
+        
+        label {
+          font-size: 13px;
+          font-weight: 500;
+          
+          .anticon {
+            color: #999;
+            margin-left: 4px;
+          }
+        }
+      }
+      
+      .ant-form-item-control {
+        .ant-input-number,
+        .ant-select,
+        .ant-input {
+          border-radius: 4px;
+        }
+        
+        .ant-switch {
+          &.ant-switch-checked {
+            background-color: #52c41a;
+          }
+        }
+      }
+    }
+  }
+  
+  .ant-row {
+    margin-bottom: 0;
+    
+    .ant-col {
+      padding-bottom: 0;
+    }
+  }
+}
+
+// 设备特定样式
+.device-tabs {
+  .ant-tabs-tab {
+    &[data-device="desktop"] {
+      .ant-badge-status-dot {
+        background-color: #1890ff;
+      }
+    }
+    
+    &[data-device="web"] {
+      .ant-badge-status-dot {
+        background-color: #52c41a;
+      }
+    }
+    
+    &[data-device="mobile"] {
+      .ant-badge-status-dot {
+        background-color: #fa8c16;
+      }
+    }
+    
+    &[data-device="watch"] {
+      .ant-badge-status-dot {
+        background-color: #eb2f96;
+      }
+    }
+    
+    &[data-device="iot"] {
+      .ant-badge-status-dot {
+        background-color: #722ed1;
+      }
+    }
+    
+    &[data-device="robot"] {
+      .ant-badge-status-dot {
+        background-color: #13c2c2;
+      }
+    }
+  }
+}
+
+// 预览模式样式
+.preview-mode {
+  .device-config-content {
+    position: relative;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.02);
+      border: 2px dashed #1890ff;
+      border-radius: 6px;
+      z-index: 1;
+    }
+    
+    &::after {
+      content: '预览模式';
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: #1890ff;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      z-index: 2;
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: 1200px) {
+  .device-config-modal {
+    .ant-modal {
+      width: 95% !important;
+      max-width: none;
+    }
+  }
+  
+  .device-config {
+    .device-tabs {
+      .ant-tabs-left-bar {
+        width: 140px;
+      }
+      
+      .ant-tabs-left-content {
+        padding-left: 16px;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .device-config-modal {
+    .ant-modal-footer {
+      .ant-btn {
+        margin-bottom: 8px;
+      }
+    }
+  }
+  
+  .device-config {
+    .device-tabs {
+      .ant-tabs-left-bar {
+        width: 120px;
+      }
+      
+      .ant-tabs-tab {
+        padding: 8px 12px;
+        
+        .ant-tabs-tab-btn {
+          font-size: 12px;
+          
+          .anticon {
+            font-size: 14px;
+          }
+        }
+      }
+    }
+  }
+  
+  .device-config-content {
+    .ant-row {
+      .ant-col {
+        margin-bottom: 16px;
+      }
+    }
+  }
+}
+
+// 暗色主题支持
+.dark {
+  .device-config-modal {
+    .ant-modal-footer {
+      border-top-color: rgba(255, 255, 255, 0.12);
+    }
+  }
+  
+  .device-config {
+    .device-tabs {
+      .ant-tabs-left-bar {
+        border-right-color: rgba(255, 255, 255, 0.12);
+      }
+      
+      .ant-tabs-tab {
+        &.ant-tabs-tab-active {
+          background-color: rgba(24, 144, 255, 0.2);
+          border-right-color: #1890ff;
+        }
+      }
+    }
+  }
+  
+  .device-config-content {
+    .ant-alert {
+      background-color: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+  }
+}
+
+// 表单验证样式
+.ant-form-item-has-error {
+  .ant-input-number,
+  .ant-select-selector,
+  .ant-input {
+    border-color: #ff4d4f;
+    box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
+  }
+}
+
+// 加载状态
+.device-config-loading {
+  .device-config-content {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}

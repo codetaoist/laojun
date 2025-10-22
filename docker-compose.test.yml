@@ -1,0 +1,208 @@
+version: '3.8'
+
+services:
+  # 测试数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: laojun-test-postgres
+    environment:
+      POSTGRES_DB: laojun_test
+      POSTGRES_USER: laojun_test
+      POSTGRES_PASSWORD: laojun_test_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./scripts/sql/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql
+    networks:
+      - laojun-test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U laojun_test -d laojun_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # 测试 Redis
+  redis:
+    image: redis:7-alpine
+    container_name: laojun-test-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_test_data:/data
+      - ./configs/redis/redis-test.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - laojun-test-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # 测试消息队列 (可选)
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: laojun-test-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: laojun_test
+      RABBITMQ_DEFAULT_PASS: laojun_test_password
+      RABBITMQ_DEFAULT_VHOST: laojun_test
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    volumes:
+      - rabbitmq_test_data:/var/lib/rabbitmq
+    networks:
+      - laojun-test-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # 测试 Elasticsearch (可选)
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: laojun-test-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9201:9200"
+      - "9301:9300"
+    volumes:
+      - elasticsearch_test_data:/usr/share/elasticsearch/data
+    networks:
+      - laojun-test-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # 测试 MinIO (对象存储)
+  minio:
+    image: minio/minio:latest
+    container_name: laojun-test-minio
+    environment:
+      MINIO_ROOT_USER: laojun_test
+      MINIO_ROOT_PASSWORD: laojun_test_password
+    ports:
+      - "9001:9000"
+      - "9091:9090"
+    volumes:
+      - minio_test_data:/data
+    command: server /data --console-address ":9090"
+    networks:
+      - laojun-test-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # 测试 Jaeger (链路追踪)
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: laojun-test-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+    ports:
+      - "16687:16686"  # Jaeger UI
+      - "14269:14268"  # Jaeger collector
+      - "14251:14250"  # Jaeger gRPC
+      - "6832:6831/udp"  # Jaeger agent
+    networks:
+      - laojun-test-network
+    restart: unless-stopped
+
+  # 测试 Prometheus (监控)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: laojun-test-prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./configs/prometheus/prometheus-test.yml:/etc/prometheus/prometheus.yml
+      - prometheus_test_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - laojun-test-network
+    restart: unless-stopped
+
+  # 测试数据库迁移工具
+  migrate:
+    image: migrate/migrate:latest
+    container_name: laojun-test-migrate
+    volumes:
+      - ./migrations:/migrations
+    networks:
+      - laojun-test-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "
+        migrate -path /migrations -database postgres://laojun_test:laojun_test_password@postgres:5432/laojun_test?sslmode=disable up
+      "
+
+  # 测试数据种子工具
+  seed:
+    build:
+      context: .
+      dockerfile: scripts/docker/Dockerfile.seed
+    container_name: laojun-test-seed
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: laojun_test
+      DB_USER: laojun_test
+      DB_PASSWORD: laojun_test_password
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - ./scripts/seed:/app/seed
+    networks:
+      - laojun-test-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_test_data:
+    driver: local
+  redis_test_data:
+    driver: local
+  rabbitmq_test_data:
+    driver: local
+  elasticsearch_test_data:
+    driver: local
+  minio_test_data:
+    driver: local
+  prometheus_test_data:
+    driver: local
+
+networks:
+  laojun-test-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

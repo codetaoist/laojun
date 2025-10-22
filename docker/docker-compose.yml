@@ -1,0 +1,408 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: laojun-postgres
+    environment:
+      POSTGRES_DB: laojun
+      POSTGRES_USER: laojun
+      POSTGRES_PASSWORD: laojun123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../laojun/database.yaml:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U laojun -d laojun"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL Exporter
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: laojun-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://laojun:laojun123@postgres:5432/laojun?sslmode=disable"
+    ports:
+      - "9187:9187"
+    networks:
+      - laojun-network
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: laojun-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Exporter
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: laojun-redis-exporter
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+    ports:
+      - "9121:9121"
+    networks:
+      - laojun-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # MinIO 对象存储
+  minio:
+    image: minio/minio:latest
+    container_name: laojun-minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+      MINIO_PROMETHEUS_AUTH_TYPE: public
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 配置中心
+  config-center:
+    build:
+      context: ../../usr/src/laojun/config-center
+      dockerfile: Dockerfile
+    container_name: laojun-config-center
+    environment:
+      - CONFIG_CENTER_PORT=8090
+      - CONFIG_CENTER_STORAGE_TYPE=file
+      - CONFIG_CENTER_STORAGE_PATH=/app/data
+      - CONFIG_CENTER_LOG_LEVEL=info
+      - CONFIG_CENTER_CORS_ENABLED=true
+      - CONFIG_CENTER_RATE_LIMIT_RPS=100
+      - CONFIG_CENTER_RATE_LIMIT_BURST=200
+    ports:
+      - "8090:8090"
+    volumes:
+      - config_center_data:/app/data
+      - ../laojun/config-center.yaml:/app/config/config.yaml:ro
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 管理后台 API
+  admin-api:
+    build:
+      context: ../../usr/src/laojun/admin-api
+      dockerfile: Dockerfile
+    container_name: laojun-admin-api
+    environment:
+      - ADMIN_API_PORT=8080
+      - ADMIN_API_DB_HOST=postgres
+      - ADMIN_API_DB_PORT=5432
+      - ADMIN_API_DB_NAME=laojun
+      - ADMIN_API_DB_USER=laojun
+      - ADMIN_API_DB_PASSWORD=laojun123
+      - ADMIN_API_REDIS_HOST=redis
+      - ADMIN_API_REDIS_PORT=6379
+      - ADMIN_API_JWT_SECRET=your-super-secret-jwt-key-here
+      - ADMIN_API_LOG_LEVEL=info
+      - ADMIN_API_CORS_ENABLED=true
+      - ADMIN_API_RATE_LIMIT_RPS=100
+      - ADMIN_API_RATE_LIMIT_BURST=200
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../laojun/admin-api.yaml:/app/config/config.yaml:ro
+    networks:
+      - laojun-network
+    depends_on:
+      - postgres
+      - redis
+      - config-center
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 插件市场 API
+  marketplace-api:
+    build:
+      context: ../../usr/src/laojun/marketplace-api
+      dockerfile: Dockerfile
+    container_name: laojun-marketplace-api
+    environment:
+      - MARKETPLACE_API_PORT=8081
+      - MARKETPLACE_API_DB_HOST=postgres
+      - MARKETPLACE_API_DB_PORT=5432
+      - MARKETPLACE_API_DB_NAME=laojun
+      - MARKETPLACE_API_DB_USER=laojun
+      - MARKETPLACE_API_DB_PASSWORD=laojun123
+      - MARKETPLACE_API_REDIS_HOST=redis
+      - MARKETPLACE_API_REDIS_PORT=6379
+      - MARKETPLACE_API_MINIO_ENDPOINT=minio:9000
+      - MARKETPLACE_API_MINIO_ACCESS_KEY=minioadmin
+      - MARKETPLACE_API_MINIO_SECRET_KEY=minioadmin123
+      - MARKETPLACE_API_LOG_LEVEL=info
+      - MARKETPLACE_API_CORS_ENABLED=true
+      - MARKETPLACE_API_RATE_LIMIT_RPS=100
+      - MARKETPLACE_API_RATE_LIMIT_BURST=200
+    ports:
+      - "8081:8081"
+    volumes:
+      - marketplace_data:/app/data
+    networks:
+      - laojun-network
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus 监控
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: laojun-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana 可视化
+  grafana:
+    image: grafana/grafana:latest
+    container_name: laojun-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=redis-datasource
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - ../grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - laojun-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f localhost:3000/api/health && echo 'ready'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # AlertManager 告警管理
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: laojun-alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    ports:
+      - "9093:9093"
+    volumes:
+      - ../alertmanager:/etc/alertmanager:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Node Exporter 系统监控
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: laojun-node-exporter
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - laojun-network
+    restart: unless-stopped
+
+  # cAdvisor 容器监控
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: laojun-cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg
+
+  # Loki 日志聚合
+  loki:
+    image: grafana/loki:latest
+    container_name: laojun-loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+    networks:
+      - laojun-network
+    restart: unless-stopped
+
+  # Promtail 日志收集
+  promtail:
+    image: grafana/promtail:latest
+    container_name: laojun-promtail
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ../promtail:/etc/promtail:ro
+    networks:
+      - laojun-network
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  # Jaeger 分布式追踪
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: laojun-jaeger
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+      - "14250:14250"
+      - "9411:9411"
+    networks:
+      - laojun-network
+    restart: unless-stopped
+
+  # Nginx 反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: laojun-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - laojun-network
+    depends_on:
+      - admin-api
+      - marketplace-api
+      - config-center
+      - grafana
+      - prometheus
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  config_center_data:
+    driver: local
+  marketplace_data:
+    driver: local
+  nginx_logs:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  alertmanager_data:
+    driver: local
+  loki_data:
+    driver: local
+
+networks:
+  laojun-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

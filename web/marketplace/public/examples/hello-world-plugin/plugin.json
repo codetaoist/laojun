@@ -1,0 +1,36 @@
+{
+  "name": "hello-world-plugin",
+  "version": "1.0.0",
+  "displayName": "Hello World 插件",
+  "description": "一个简单的 Hello World 示例插件，展示基本的插件结构",
+  "author": "示例开发者",
+  "license": "MIT",
+  "type": "in_process",
+  "runtime": "javascript",
+  "entry_point": "index.js",
+  "exported_symbols": ["HelloWorld"],
+  "interface_spec": {
+    "commands": [
+      {
+        "name": "hello",
+        "description": "显示 Hello World 消息",
+        "parameters": []
+      }
+    ],
+    "events": [],
+    "apis": []
+  },
+  "dependencies": [],
+  "runtime_config": {
+    "memory_limit": "64MB",
+    "timeout": 5000
+  },
+  "security_policy": {
+    "permissions": ["ui.show_message"],
+    "sandbox": true
+  },
+  "tags": ["示例", "教程", "入门"],
+  "category": "开发工具",
+  "homepage": "https://example.com/hello-world-plugin",
+  "repository": "https://github.com/example/hello-world-plugin"
+}

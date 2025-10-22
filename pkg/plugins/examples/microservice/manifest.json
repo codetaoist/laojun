@@ -1,0 +1,337 @@
+{
+  "id": "example-microservice-plugin",
+  "name": "Example Microservice Plugin",
+  "version": "1.0.0",
+  "description": "A comprehensive example of a microservice plugin for the Taishanglaojun plugin system",
+  "type": "microservice",
+  "runtime": "docker",
+  "author": "Taishanglaojun Team",
+  "license": "MIT",
+  "homepage": "https://github.com/taishanglaojun/plugins/microservice-example",
+  "repository": "https://github.com/taishanglaojun/plugins",
+  "main": "main.go",
+  "dockerfile": "Dockerfile",
+  "image": "taishanglaojun/example-microservice-plugin:1.0.0",
+  "tags": ["example", "microservice", "docker", "grpc", "http"],
+  "keywords": ["plugin", "microservice", "api", "processing"],
+  
+  "config": {
+    "type": "object",
+    "properties": {
+      "plugin_id": {
+        "type": "string",
+        "description": "Unique identifier for the plugin instance",
+        "default": "example-microservice-plugin"
+      },
+      "instance_id": {
+        "type": "string",
+        "description": "Unique identifier for this plugin instance",
+        "default": "instance-1"
+      },
+      "name": {
+        "type": "string",
+        "description": "Display name of the plugin",
+        "default": "Example Microservice Plugin"
+      },
+      "port": {
+        "type": "integer",
+        "description": "HTTP server port",
+        "default": 8080,
+        "minimum": 1024,
+        "maximum": 65535
+      },
+      "grpc_server": {
+        "type": "string",
+        "description": "gRPC server address for plugin communication",
+        "default": "localhost:9090"
+      },
+      "log_level": {
+        "type": "string",
+        "description": "Logging level",
+        "enum": ["debug", "info", "warn", "error"],
+        "default": "info"
+      },
+      "environment": {
+        "type": "string",
+        "description": "Runtime environment",
+        "enum": ["development", "staging", "production"],
+        "default": "development"
+      },
+      "health_check": {
+        "type": "boolean",
+        "description": "Enable health check endpoint",
+        "default": true
+      },
+      "metrics_path": {
+        "type": "string",
+        "description": "Path for metrics endpoint",
+        "default": "/metrics"
+      }
+    },
+    "required": ["plugin_id", "port", "grpc_server"]
+  },
+  
+  "capabilities": [
+    "request_processing",
+    "health_check",
+    "metrics",
+    "configuration",
+    "logging",
+    "grpc_communication",
+    "http_api"
+  ],
+  
+  "api": {
+    "endpoints": {
+      "/health": {
+        "method": "GET",
+        "description": "Health check endpoint",
+        "response": {
+          "type": "object",
+          "properties": {
+            "status": {"type": "string"},
+            "message": {"type": "string"},
+            "timestamp": {"type": "string"},
+            "details": {"type": "object"}
+          }
+        }
+      },
+      "/stats": {
+        "method": "GET",
+        "description": "Plugin statistics endpoint",
+        "response": {
+          "type": "object",
+          "properties": {
+            "request_count": {"type": "integer"},
+            "error_count": {"type": "integer"},
+            "last_request_time": {"type": "string"},
+            "average_latency": {"type": "number"},
+            "uptime": {"type": "string"}
+          }
+        }
+      },
+      "/process": {
+        "method": "POST",
+        "description": "Main request processing endpoint",
+        "request": {
+          "type": "object",
+          "properties": {
+            "id": {"type": "string"},
+            "method": {"type": "string"},
+            "data": {"type": "object"},
+            "timestamp": {"type": "string"}
+          },
+          "required": ["id", "method"]
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "id": {"type": "string"},
+            "success": {"type": "boolean"},
+            "data": {"type": "object"},
+            "message": {"type": "string"},
+            "timestamp": {"type": "string"},
+            "latency": {"type": "number"}
+          }
+        }
+      },
+      "/config": {
+        "method": ["GET", "PUT"],
+        "description": "Configuration management endpoint"
+      },
+      "/metadata": {
+        "method": "GET",
+        "description": "Plugin metadata endpoint"
+      }
+    },
+    "methods": {
+      "hello": {
+        "description": "Simple greeting method",
+        "input": {
+          "name": {"type": "string", "optional": true}
+        },
+        "output": {
+          "message": {"type": "string"}
+        }
+      },
+      "calculate": {
+        "description": "Mathematical calculation method",
+        "input": {
+          "operation": {"type": "string", "enum": ["add", "subtract", "multiply", "divide"]},
+          "a": {"type": "number"},
+          "b": {"type": "number"}
+        },
+        "output": {
+          "result": {"type": "number"},
+          "operation": {"type": "string"},
+          "operands": {"type": "object"}
+        }
+      },
+      "echo": {
+        "description": "Echo input data",
+        "input": {"type": "object"},
+        "output": {"type": "object"}
+      },
+      "time": {
+        "description": "Get server time information",
+        "input": {},
+        "output": {
+          "server_time": {"type": "string"},
+          "timezone": {"type": "string"},
+          "unix_timestamp": {"type": "integer"}
+        }
+      },
+      "stats": {
+        "description": "Get plugin statistics",
+        "input": {},
+        "output": {
+          "plugin_stats": {"type": "object"},
+          "uptime": {"type": "string"}
+        }
+      }
+    }
+  },
+  
+  "resources": {
+    "limits": {
+      "memory": "512Mi",
+      "cpu": "500m",
+      "disk": "1Gi"
+    },
+    "requests": {
+      "memory": "256Mi",
+      "cpu": "250m",
+      "disk": "512Mi"
+    }
+  },
+  
+  "docker": {
+    "image": "taishanglaojun/example-microservice-plugin:1.0.0",
+    "ports": [
+      {
+        "container": 8080,
+        "host": 0,
+        "protocol": "tcp"
+      }
+    ],
+    "environment": [
+      "PLUGIN_ID",
+      "INSTANCE_ID",
+      "PLUGIN_NAME",
+      "PLUGIN_VERSION",
+      "PLUGIN_PORT",
+      "GRPC_SERVER",
+      "PLUGIN_LOG_LEVEL",
+      "PLUGIN_ENV",
+      "HEALTH_CHECK",
+      "METRICS_PATH"
+    ],
+    "volumes": [
+      {
+        "host": "/var/log/plugins",
+        "container": "/app/logs",
+        "mode": "rw"
+      }
+    ],
+    "networks": ["plugin-network"],
+    "restart_policy": "unless-stopped",
+    "health_check": {
+      "test": ["CMD", "curl", "-f", "http://localhost:8080/health"],
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3,
+      "start_period": "40s"
+    }
+  },
+  
+  "security": {
+    "permissions": [
+      "network.http.server",
+      "network.grpc.client",
+      "filesystem.read.logs",
+      "filesystem.write.logs"
+    ],
+    "sandbox": {
+      "network_isolation": true,
+      "filesystem_isolation": true,
+      "process_isolation": true
+    },
+    "secrets": [
+      "grpc_client_cert",
+      "grpc_client_key"
+    ]
+  },
+  
+  "monitoring": {
+    "metrics": [
+      {
+        "name": "request_count",
+        "type": "counter",
+        "description": "Total number of requests processed"
+      },
+      {
+        "name": "error_count",
+        "type": "counter",
+        "description": "Total number of errors encountered"
+      },
+      {
+        "name": "request_latency",
+        "type": "histogram",
+        "description": "Request processing latency in seconds"
+      },
+      {
+        "name": "active_connections",
+        "type": "gauge",
+        "description": "Number of active connections"
+      }
+    ],
+    "health_checks": [
+      {
+        "name": "http_server",
+        "type": "http",
+        "endpoint": "/health",
+        "interval": "30s",
+        "timeout": "10s"
+      },
+      {
+        "name": "grpc_connection",
+        "type": "grpc",
+        "endpoint": "grpc_server",
+        "interval": "60s",
+        "timeout": "15s"
+      }
+    ]
+  },
+  
+  "documentation": {
+    "readme": "README.md",
+    "api_docs": "docs/api.md",
+    "examples": "examples/",
+    "changelog": "CHANGELOG.md"
+  },
+  
+  "build": {
+    "go_version": "1.21",
+    "build_time": "2024-01-15T10:30:00Z",
+    "git_commit": "abc123def456",
+    "build_number": "1"
+  },
+  
+  "compatibility": {
+    "plugin_system_version": ">=1.0.0",
+    "go_version": ">=1.19",
+    "docker_version": ">=20.10.0",
+    "kubernetes_version": ">=1.20.0"
+  },
+  
+  "dependencies": {
+    "runtime": [
+      "github.com/gorilla/mux@v1.8.0",
+      "google.golang.org/grpc@v1.60.0",
+      "google.golang.org/protobuf@v1.31.0"
+    ],
+    "build": [
+      "golang:1.21-alpine"
+    ]
+  }
+}

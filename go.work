@@ -1,0 +1,10 @@
+go 1.23.0
+
+use (
+	.
+	./pkg/plugins
+	./pkg/shared
+	./tools/debug
+	./tools/plugin-cli
+	./tools/swagger
+)
