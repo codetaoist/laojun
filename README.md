@@ -17,24 +17,12 @@
 .\deploy.ps1 help
 ```
 
-**Linux/macOS 用户：**
-```bash
-# 部署生产环境
-./deploy.sh prod deploy
-
-# 部署开发环境
-./deploy.sh dev deploy
-
-# 查看帮助
-./deploy.sh help
-```
-
 **常用操作：**
-- 构建镜像：`./deploy.sh prod build`
-- 重启服务：`./deploy.sh prod restart`
-- 查看日志：`./deploy.sh prod logs`
-- 健康检查：`./deploy.sh prod health`
-- 停止服务：`./deploy.sh prod stop`
+- 构建镜像：`.\deploy.ps1 prod build`
+- 重启服务：`.\deploy.ps1 prod restart`
+- 查看日志：`.\deploy.ps1 prod logs`
+- 健康检查：`.\deploy.ps1 prod health`
+- 停止服务：`.\deploy.ps1 prod stop`
 
 ### 方案二：Docker Compose（手动）
 - 前提：安装并启动 Docker Desktop。
@@ -53,7 +41,7 @@
 - 关闭：
   - `docker compose -f deploy/docker/docker-compose.yml down`
 
-提示：生产环境请使用 `deploy/docker/docker-compose.prod.yml`，包含完整的监控栈（Prometheus/Grafana）。
+提示：不同环境请使用对应的环境变量文件：`deploy/configs/.env.development`、`deploy/configs/.env.staging`、`deploy/configs/.env.production`。
 
 ### 方案三：本地开发（单服务调试）
 - 前提：`Go 1.21+`、`Node.js 18+`、已启动 `postgres`/`redis`（可用上面的 Compose 启动依赖）。
@@ -94,9 +82,9 @@
 - 完成上述最小改动后，再执行构建与启动。
 
 ## 目录与关键文件
-- 部署脚本：`./deploy.sh`、`./deploy.ps1`（根目录入口）
+- 部署脚本：`./deploy.ps1`、`./start.ps1`（根目录入口）
 - Docker 文件：`deploy/docker/docker-compose.yml`、`deploy/docker/Dockerfile`
-- 环境配置：`deploy/configs/.env.dev`、`deploy/configs/.env.prod`
+- 环境配置：`deploy/configs/.env`（默认）、`deploy/configs/.env.development`、`deploy/configs/.env.staging`、`deploy/configs/.env.production`
 - 应用配置：`configs/admin-api.yaml`、`configs/config-center.yaml`
 - 数据库迁移：`db/migrations/`（首次启动 `postgres` 自动执行）
 - 部署文档：`deploy/docs/README.md`（详细部署指南）

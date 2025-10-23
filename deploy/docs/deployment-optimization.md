@@ -2,7 +2,7 @@
 
 ## 优化概述
 
-本次优化对太上老君系统的部署文件结构进行了全面重组，解决了文件分散、重复配置、路径混乱等问题，建立了统一、清晰、易维护的部署架构。
+本次优化对太上老君系统的部署文件结构进行了全面重组，解决了新旧架构并存、重复配置、路径混乱等问题，建立了统一、清晰、易维护的部署架构。已完成新架构的统一，清理了冗余文件，标准化了配置文件命名。
 
 ## 优化前的问题
 
@@ -29,9 +29,7 @@ deploy/                           # 统一的部署根目录
 ├── docker/                      # Docker 相关文件
 │   ├── Dockerfile              # 开发环境 Dockerfile
 │   ├── Dockerfile.prod         # 生产环境 Dockerfile  
-│   ├── docker-compose.yml      # 开发环境编排
-│   ├── docker-compose.prod.yml # 生产环境编排
-│   ├── docker-compose.test.yml # 测试环境编排
+│   ├── docker-compose.yml      # 统一服务编排
 │   └── README.md              # Docker 使用说明
 ├── k8s/                        # Kubernetes 配置
 │   ├── namespace.yaml
@@ -43,16 +41,12 @@ deploy/                           # 统一的部署根目录
 │       └── laojun.conf        # 站点配置
 ├── supervisor/                 # Supervisor 配置
 │   └── supervisord.conf
-├── scripts/                    # 部署脚本
-│   ├── deploy.sh              # 主部署脚本 (Linux/macOS)
-│   ├── deploy.ps1             # 主部署脚本 (Windows)
-│   ├── quick-deploy.sh        # 快速部署脚本
-│   └── utils/                 # 工具脚本目录
 ├── configs/                    # 配置文件
 │   ├── deploy.yaml            # 统一部署配置
-│   ├── .env.dev               # 开发环境配置
+│   ├── .env                   # 默认环境配置
+│   ├── .env.development       # 开发环境配置
 │   ├── .env.staging           # 预发布环境配置
-│   └── .env.prod              # 生产环境配置
+│   └── .env.production        # 生产环境配置
 └── docs/                       # 部署文档
     ├── README.md              # 主部署文档
     └── docker-guide.md        # Docker 使用指南
@@ -61,8 +55,8 @@ deploy/                           # 统一的部署根目录
 ### 根目录入口脚本
 
 ```
-deploy.sh                       # Linux/macOS 部署入口
 deploy.ps1                      # Windows 部署入口
+start.ps1                       # Windows 快速启动脚本
 ```
 
 ## 优化实施过程
@@ -161,23 +155,22 @@ deploy.ps1                      # Windows 部署入口
 
 ### 快速部署
 
-```bash
+```powershell
 # 使用根目录入口脚本 (推荐)
-./deploy.sh prod deploy
+.\deploy.ps1 prod deploy
 
-# 或直接使用 deploy/scripts 下的脚本
-cd deploy/scripts
-./deploy.sh prod deploy
+# 快速启动服务
+.\start.ps1
 ```
 
 ### 配置管理
 
-```bash
+```powershell
 # 编辑环境配置
-nano deploy/configs/.env.prod
+notepad deploy\configs\.env.production
 
 # 查看统一配置
-cat deploy/configs/deploy.yaml
+Get-Content deploy\configs\deploy.yaml
 ```
 
 ### 文档查看

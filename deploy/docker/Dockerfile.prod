@@ -1,41 +1,41 @@
 # 生产环境多阶段构建 Dockerfile
 # 第一阶段：前端构建
-FROM node:18-alpine AS frontend-builder
+FROM node:18 AS frontend-builder
 
 # 设置工作目录
 WORKDIR /app
 
 # 安装 pnpm
-RUN npm install -g pnpm
+RUN npm --version
 
 # 构建管理后台前端
-COPY web/admin/package.json web/admin/pnpm-lock.yaml ./admin/
+COPY web/admin/package*.json ./admin/
 WORKDIR /app/admin
-RUN pnpm install --frozen-lockfile
+RUN npm ci
 
 COPY web/admin/ ./
-RUN pnpm build
+RUN npm run build
 
 # 构建市场前端
 WORKDIR /app
-COPY web/marketplace/package.json web/marketplace/pnpm-lock.yaml ./marketplace/
+COPY web/marketplace/package*.json ./marketplace/
 WORKDIR /app/marketplace
-RUN pnpm install --frozen-lockfile
+RUN npm ci
 
 COPY web/marketplace/ ./
-RUN pnpm build
+RUN npm run build
 
 # 第二阶段：后端构建
-FROM golang:1.21-alpine AS backend-builder
+FROM golang:1.21 AS backend-builder
 
 # 设置工作目录
 WORKDIR /app
 
 # 安装必要的包
-RUN apk add --no-cache git ca-certificates tzdata
+RUN apt-get update && apt-get install -y git ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
 
 # 复制 go mod 文件
-COPY go.mod go.sum go.work go.work.sum ./
+COPY go.mod go.work go.work.sum ./
 
 # 复制子模块的 go.mod 文件
 COPY pkg/plugins/go.mod ./pkg/plugins/
@@ -43,6 +43,10 @@ COPY pkg/shared/go.mod ./pkg/shared/
 COPY tools/debug/go.mod ./tools/debug/
 COPY tools/plugin-cli/go.mod ./tools/plugin-cli/
 COPY tools/swagger/go.mod ./tools/swagger/
+
+# 配置 Go 工具链自动升级与代理
+ENV GOTOOLCHAIN=auto
+ENV GOPROXY=https://goproxy.cn,direct
 
 # 下载依赖
 RUN go mod download
@@ -72,17 +76,17 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -o db-migrate ./cmd/db-migrate
 
 # 第三阶段：Nginx + 后端服务运行时
-FROM nginx:alpine AS production
+FROM nginx:stable AS production
 
 # 安装必要的包
-RUN apk --no-cache add ca-certificates tzdata supervisor
+RUN apt-get update && apt-get install -y supervisor curl ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
 
 # 创建非 root 用户
-RUN addgroup -g 1001 -S appgroup && \
-    adduser -u 1001 -S appuser -G appgroup
+RUN addgroup --system --gid 1001 appgroup && \
+    adduser --system --uid 1001 --ingroup appgroup appuser
 
-# 创建应用目录
-RUN mkdir -p /app/bin /app/configs /app/web /var/log/supervisor
+# 创建应用目录（遵循项目布局，不使用 /var/log 等 FHS 路径）
+RUN mkdir -p /app/bin /app/configs /app/web /app/db /app/logs/supervisor /app/run
 
 # 复制后端二进制文件
 COPY --from=backend-builder /app/admin-api /app/bin/
@@ -94,11 +98,11 @@ COPY --from=backend-builder /app/db-migrate /app/bin/
 COPY --from=frontend-builder /app/admin/dist /app/web/admin
 COPY --from=frontend-builder /app/marketplace/dist /app/web/marketplace
 
-# 复制配置文件
+# 复制配置文件与迁移
 COPY configs/ /app/configs/
 COPY db/ /app/db/
 
-# 复制配置文件
+# 复制 Nginx 配置
 COPY deploy/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY deploy/nginx/conf.d/ /etc/nginx/conf.d/
 
@@ -106,8 +110,7 @@ COPY deploy/nginx/conf.d/ /etc/nginx/conf.d/
 COPY deploy/supervisor/ /etc/supervisor/conf.d/
 
 # 设置权限
-RUN chown -R appuser:appgroup /app
-RUN chmod +x /app/bin/*
+RUN chown -R appuser:appgroup /app && chmod +x /app/bin/*
 
 # 暴露端口
 EXPOSE 80 8080 8081 8082
@@ -117,4 +120,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost/health || exit 1
 
 # 启动 Supervisor
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

@@ -62,10 +62,16 @@ func main() {
 		log.Fatalf("Failed to create server: %v", err)
 	}
 
-	// 获取端口，默认为8081
-	port := os.Getenv("PORT")
+	// 获取端口，优先使用服务专属环境变量，其次通用变量，最后默认 8082
+	port := os.Getenv("MARKETPLACE_PORT")
 	if port == "" {
-		port = "8081"
+		if envPort := os.Getenv("SERVER_PORT"); envPort != "" {
+			port = envPort
+		} else if envPort := os.Getenv("PORT"); envPort != "" {
+			port = envPort
+		} else {
+			port = "8082"
+		}
 	}
 
 	env := os.Getenv("APP_ENV")

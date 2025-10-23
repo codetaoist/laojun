@@ -1,11 +1,10 @@
 package server
 
 import (
+	"os"
 	"github.com/codetaoist/laojun/internal/database"
 	"github.com/codetaoist/laojun/internal/handlers"
 	"github.com/codetaoist/laojun/internal/middleware"
-	"github.com/codetaoist/laojun/internal/plugin"
-	"github.com/codetaoist/laojun/internal/routes"
 	"github.com/codetaoist/laojun/internal/services"
 	"github.com/codetaoist/laojun/pkg/shared/auth"
 	"github.com/codetaoist/laojun/pkg/shared/config"
@@ -32,10 +31,12 @@ func NewServer(cfg *config.Config) (*Server, error) {
 		return nil, err
 	}
 
-	// 执行数据库迁移
-	migrator := database.NewMigrator(db.DB)
-	if err := migrator.RunMigrations(); err != nil {
-		return nil, err
+	// 执行数据库迁移（可通过环境变量禁用）
+	if os.Getenv("DISABLE_MIGRATIONS") != "true" {
+		migrator := database.NewMigrator(db.DB)
+		if err := migrator.RunMigrations(); err != nil {
+			return nil, err
+		}
 	}
 
 	// 创建JWT管理器
@@ -53,14 +54,14 @@ func NewServer(cfg *config.Config) (*Server, error) {
 	authService := services.NewAuthService(db)
 	communityService := services.NewCommunityService(db)
 
-	// 创建扩展插件系统组件
-	pluginLoaderManager := plugin.NewPluginLoaderManager(logger)
-	microserviceManager, err := plugin.NewMicroservicePluginManager(logger)
-	if err != nil {
-		return nil, err
-	}
-	pluginGateway := plugin.NewPluginGateway(pluginLoaderManager, microserviceManager, logger)
-	extendedPluginService := services.NewExtendedPluginService(db, pluginLoaderManager, microserviceManager, pluginGateway, logger)
+	// 创建扩展插件系统组件（暂时注释掉未使用的部分）
+	// pluginLoaderManager := plugin.NewPluginLoaderManager(logger)
+	// microserviceManager, err := plugin.NewMicroservicePluginManager(logger)
+	// if err != nil {
+	//	return nil, err
+	// }
+	// pluginGateway := plugin.NewPluginGateway(pluginLoaderManager, microserviceManager, logger)
+	// extendedPluginService := services.NewExtendedPluginService(db, pluginLoaderManager, microserviceManager, pluginGateway, logger)
 
 	// 创建处理器层
 	pluginHandler := handlers.NewPluginHandler(pluginService)
@@ -69,7 +70,6 @@ func NewServer(cfg *config.Config) (*Server, error) {
 	developerHandler := handlers.NewDeveloperHandler(developerService)
 	authHandler := handlers.NewMarketplaceAuthHandler(authService, jwtManager, cfg)
 	communityHandler := handlers.NewCommunityHandler(communityService)
-	extendedPluginHandler := handlers.NewExtendedPluginHandler(extendedPluginService, categoryService)
 
 	// 设置Gin模式
 	if cfg.Server.Mode == "production" {
@@ -238,15 +238,28 @@ func NewServer(cfg *config.Config) (*Server, error) {
 				communityAuth.POST("/like", communityHandler.ToggleLike)
 			}
 		}
+
+		// Marketplace 路径别名以兼容前端
+		marketplace := api.Group("/marketplace")
+		{
+			// 列表与分类映射到现有插件与分类接口
+			marketplace.GET("/plugins", pluginHandler.GetPlugins)
+			marketplace.GET("/plugins/search", pluginHandler.GetPlugins)
+			marketplace.GET("/plugins/:id", pluginHandler.GetPlugin)
+			marketplace.GET("/categories", categoryHandler.GetCategories)
+
+			// 统计信息（简化聚合）
+			marketplace.GET("/plugins/stats", pluginHandler.GetMarketplacePluginStats)
+
+			// 需要认证的 marketplace 子路由（收藏等）
+			marketplaceAuth := marketplace.Group("")
+			marketplaceAuth.Use(middleware.AuthMiddleware(authService))
+			{
+				marketplaceAuth.GET("/plugins/favorites", pluginHandler.GetUserFavorites)
+			}
+		}
+
 	}
-
-	// 设置扩展插件路由
-	routes.SetupExtendedPluginRoutes(router, extendedPluginHandler, authService)
-	routes.SetupPluginGatewayRoutes(router, extendedPluginHandler)
-	routes.SetupPluginWebhookRoutes(router, extendedPluginHandler, authService)
-
-	// 设置插件网关路由
-	pluginGateway.SetupRoutes(router)
 
 	return &Server{
 		router:     router,

@@ -17,6 +17,7 @@ export default defineConfig({
       '@/hooks': path.resolve(__dirname, './src/hooks'),
     },
   },
+  base: '/admin/',
   server: {
     port: 3000,
     host: true,
@@ -29,7 +30,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../../../var/www/laojun/admin-web',
+    outDir: './dist',
     emptyOutDir: true,
     sourcemap: false,
     rollupOptions: {

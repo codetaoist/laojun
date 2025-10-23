@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -13,15 +14,21 @@ import (
 
 // Migrator 数据库迁移器
 type Migrator struct {
-	db          *sql.DB
+	db             *sql.DB
 	migrationsPath string
 }
 
 // NewMigrator 创建新的迁移器
 func NewMigrator(db *sql.DB) *Migrator {
+	// 允许通过环境变量覆盖迁移目录
+	mp := os.Getenv("MIGRATIONS_DIR")
+	if mp == "" {
+		// 使用 Go 项目相对目录规则：相对于工作目录（由 Supervisor 设置为 /app）
+		mp = "./db/migrations"
+	}
 	return &Migrator{
 		db:             db,
-		migrationsPath: "d:/taishanglaojun/db/migrations",
+		migrationsPath: mp,
 	}
 }
 
@@ -70,7 +77,7 @@ func (m *Migrator) createMigrator() (*migrate.Migrate, error) {
 		return nil, fmt.Errorf("创建数据库驱动失败: %v", err)
 	}
 
-	// 获取迁移文件路径
+	// 获取迁移文件路径（相对路径转绝对路径）
 	migrationsPath, err := filepath.Abs(m.migrationsPath)
 	if err != nil {
 		return nil, fmt.Errorf("获取迁移文件路径失败: %v", err)

@@ -148,9 +148,9 @@ func (s *AuthService) Register(req *RegisterRequest) (*MarketplaceUser, error) {
 func (s *AuthService) Login(req *LoginRequest) (*MarketplaceUser, error) {
 	// 根据用户名或邮箱查找用户
 	query := `
-		SELECT id, username, email, password_hash, full_name, avatar, bio, 
-			   is_active, is_email_verified, created_at, updated_at, last_login_at
-		FROM mp_users 
+		SELECT id, username, email, password_hash, full_name, avatar, 
+			   is_active, created_at, updated_at, last_login_at
+		FROM ua_admin 
 		WHERE (username = $1 OR email = $1) AND is_active = true`
 
 	var (
@@ -160,17 +160,15 @@ func (s *AuthService) Login(req *LoginRequest) (*MarketplaceUser, error) {
 		passwordHash    string
 		fullName        sql.NullString
 		avatar          sql.NullString
-		bio             sql.NullString
 		isActive        bool
-		isEmailVerified bool
 		createdAt       time.Time
 		updatedAt       time.Time
 		lastLoginAt     sql.NullTime
 	)
 
 	err := s.db.QueryRow(query, req.Username).Scan(
-		&id, &username, &email, &passwordHash, &fullName, &avatar, &bio,
-		&isActive, &isEmailVerified, &createdAt, &updatedAt, &lastLoginAt,
+		&id, &username, &email, &passwordHash, &fullName, &avatar,
+		&isActive, &createdAt, &updatedAt, &lastLoginAt,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -187,7 +185,7 @@ func (s *AuthService) Login(req *LoginRequest) (*MarketplaceUser, error) {
 
 	// 更新最后登录时间
 	now := time.Now()
-	_, err = s.db.Exec("UPDATE mp_users SET last_login_at = $1, updated_at = $2 WHERE id = $3",
+	_, err = s.db.Exec("UPDATE ua_admin SET last_login_at = $1, updated_at = $2 WHERE id = $3",
 		now, now, id)
 	if err != nil {
 		// 记录错误但不影响登录
@@ -205,7 +203,7 @@ func (s *AuthService) Login(req *LoginRequest) (*MarketplaceUser, error) {
 			UpdatedAt:   now,
 			LastLoginAt: &now,
 		},
-		IsEmailVerified: isEmailVerified,
+		IsEmailVerified: false, // ua_admin 表没有此字段，默认为 false
 	}
 
 	if fullName.Valid {
@@ -214,9 +212,6 @@ func (s *AuthService) Login(req *LoginRequest) (*MarketplaceUser, error) {
 	if avatar.Valid {
 		user.User.Avatar = &avatar.String
 	}
-	if bio.Valid {
-		user.User.Bio = &bio.String
-	}
 
 	return user, nil
 }
@@ -224,9 +219,9 @@ func (s *AuthService) Login(req *LoginRequest) (*MarketplaceUser, error) {
 // GetUserByID 根据ID获取用户
 func (s *AuthService) GetUserByID(userID uuid.UUID) (*MarketplaceUser, error) {
 	query := `
-		SELECT id, username, email, full_name, avatar, bio, 
-			   is_active, is_email_verified, created_at, updated_at, last_login_at
-		FROM mp_users 
+		SELECT id, username, email, full_name, avatar, 
+			   is_active, created_at, updated_at, last_login_at
+		FROM ua_admin 
 		WHERE id = $1 AND is_active = true`
 
 	var (
@@ -235,17 +230,15 @@ func (s *AuthService) GetUserByID(userID uuid.UUID) (*MarketplaceUser, error) {
 		email           string
 		fullName        sql.NullString
 		avatar          sql.NullString
-		bio             sql.NullString
 		isActive        bool
-		isEmailVerified bool
 		createdAt       time.Time
 		updatedAt       time.Time
 		lastLoginAt     sql.NullTime
 	)
 
 	err := s.db.QueryRow(query, userID).Scan(
-		&id, &username, &email, &fullName, &avatar, &bio,
-		&isActive, &isEmailVerified, &createdAt, &updatedAt, &lastLoginAt,
+		&id, &username, &email, &fullName, &avatar,
+		&isActive, &createdAt, &updatedAt, &lastLoginAt,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -263,7 +256,7 @@ func (s *AuthService) GetUserByID(userID uuid.UUID) (*MarketplaceUser, error) {
 			CreatedAt: createdAt,
 			UpdatedAt: updatedAt,
 		},
-		IsEmailVerified: isEmailVerified,
+		IsEmailVerified: false, // ua_admin 表没有此字段，默认为 false
 	}
 
 	if fullName.Valid {
@@ -271,9 +264,6 @@ func (s *AuthService) GetUserByID(userID uuid.UUID) (*MarketplaceUser, error) {
 	}
 	if avatar.Valid {
 		user.User.Avatar = &avatar.String
-	}
-	if bio.Valid {
-		user.User.Bio = &bio.String
 	}
 	if lastLoginAt.Valid {
 		user.User.LastLoginAt = &lastLoginAt.Time
@@ -291,7 +281,7 @@ func (s *AuthService) UpdateProfile(userID uuid.UUID, updates map[string]interfa
 
 	for field, value := range updates {
 		switch field {
-		case "full_name", "avatar", "bio":
+		case "full_name", "avatar": // 移除 bio 字段，因为 ua_admin 表中没有
 			argIndex++
 			setParts = append(setParts, fmt.Sprintf("%s = $%d", field, argIndex))
 			args = append(args, value)
@@ -302,7 +292,7 @@ func (s *AuthService) UpdateProfile(userID uuid.UUID, updates map[string]interfa
 		return nil, errors.New("没有可更新的字段")
 	}
 
-	query := fmt.Sprintf("UPDATE mp_users SET %s WHERE id = $%d",
+	query := fmt.Sprintf("UPDATE ua_admin SET %s WHERE id = $%d",
 		strings.Join(setParts, ", "), argIndex+1)
 	args = append(args, userID)
 
@@ -318,7 +308,7 @@ func (s *AuthService) UpdateProfile(userID uuid.UUID, updates map[string]interfa
 func (s *AuthService) ChangePassword(userID uuid.UUID, oldPassword, newPassword string) error {
 	// 获取当前密码哈希
 	var currentHash string
-	err := s.db.DB.QueryRow("SELECT password_hash FROM mp_users WHERE id = $1", userID).Scan(&currentHash)
+	err := s.db.DB.QueryRow("SELECT password_hash FROM ua_admin WHERE id = $1", userID).Scan(&currentHash)
 	if err != nil {
 		return fmt.Errorf("获取用户密码失败: %w", err)
 	}
@@ -336,7 +326,7 @@ func (s *AuthService) ChangePassword(userID uuid.UUID, oldPassword, newPassword 
 	}
 
 	// 更新密码
-	_, err = s.db.Exec("UPDATE mp_users SET password_hash = $1, updated_at = NOW() WHERE id = $2",
+	_, err = s.db.Exec("UPDATE ua_admin SET password_hash = $1, updated_at = NOW() WHERE id = $2",
 		string(hashedPassword), userID)
 	if err != nil {
 		return fmt.Errorf("更新密码失败: %w", err)

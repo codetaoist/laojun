@@ -14,7 +14,7 @@ import {
 } from 'antd';
 import {
   HomeOutlined,
-  ShieldOutlined,
+  SafetyOutlined,
   MailOutlined,
   PhoneOutlined,
   CalendarOutlined,
@@ -39,7 +39,8 @@ const Privacy: React.FC = () => {
           </span>
         </Breadcrumb.Item>
         <Breadcrumb.Item>
-          <ShieldOutlined />
+-          <ShieldOutlined />
++          <SafetyOutlined />
           隐私政策
         </Breadcrumb.Item>
       </Breadcrumb>
@@ -113,7 +114,8 @@ const Privacy: React.FC = () => {
             {/* 页面标题 */}
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
               <Title level={1}>
-                <ShieldOutlined style={{ marginRight: '12px', color: '#52c41a' }} />
+-                <ShieldOutlined style={{ marginRight: '12px', color: '#52c41a' }} />
++                <SafetyOutlined style={{ marginRight: '12px', color: '#52c41a' }} />
                 隐私政策
               </Title>
               <Space>

@@ -11,7 +11,7 @@ project:
 environments:
   dev:
     compose_file: "docker-compose.yml"
-    env_file: ".env.dev"
+    env_file: ".env.development"
     replicas:
       admin_api: 1
       marketplace_api: 1
@@ -32,8 +32,8 @@ environments:
       cpu_limit: "1.0"
     
   prod:
-    compose_file: "docker-compose.prod.yml"
-    env_file: ".env.prod"
+    compose_file: "docker-compose.yml"
+    env_file: ".env.production"
     replicas:
       admin_api: 3
       marketplace_api: 3

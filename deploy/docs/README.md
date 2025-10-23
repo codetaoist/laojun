@@ -32,9 +32,7 @@ deploy/
 ├── docker/                    # Docker 相关文件
 │   ├── Dockerfile            # 开发环境 Dockerfile
 │   ├── Dockerfile.prod       # 生产环境 Dockerfile
-│   ├── docker-compose.yml    # 开发环境编排
-│   ├── docker-compose.prod.yml  # 生产环境编排
-│   ├── docker-compose.test.yml  # 测试环境编排
+│   ├── docker-compose.yml    # 统一服务编排
 │   └── README.md            # Docker 使用说明
 ├── k8s/                      # Kubernetes 配置
 │   ├── namespace.yaml
@@ -46,16 +44,12 @@ deploy/
 │       └── laojun.conf      # 站点配置
 ├── supervisor/               # Supervisor 配置
 │   └── supervisord.conf
-├── scripts/                  # 部署脚本
-│   ├── deploy.sh            # 主部署脚本 (Linux/macOS)
-│   ├── deploy.ps1           # 主部署脚本 (Windows)
-│   ├── quick-deploy.sh      # 快速部署脚本
-│   └── utils/               # 工具脚本目录
 ├── configs/                  # 配置文件
 │   ├── deploy.yaml          # 统一部署配置
-│   ├── .env.dev             # 开发环境配置
+│   ├── .env                 # 默认环境配置
+│   ├── .env.development     # 开发环境配置
 │   ├── .env.staging         # 预发布环境配置
-│   └── .env.prod            # 生产环境配置
+│   └── .env.production      # 生产环境配置
 └── docs/                     # 部署文档
     ├── README.md            # 主部署文档
     └── docker-guide.md      # Docker 使用指南
@@ -64,10 +58,9 @@ deploy/
 ### 核心文件
 
 - `deploy/docker/Dockerfile.prod` - 生产环境多阶段构建文件
-- `deploy/docker/docker-compose.prod.yml` - 生产环境服务编排
-- `deploy/configs/.env.prod` - 生产环境配置文件
-- `deploy/scripts/deploy.sh` / `deploy.ps1` - 自动化部署脚本
-- `deploy/scripts/quick-deploy.sh` - 服务器快速配置脚本
+- `deploy/docker/docker-compose.yml` - 统一服务编排文件
+- `deploy/configs/.env.production` - 生产环境配置文件
+- `./deploy.ps1` / `./start.ps1` - 自动化部署脚本
 - `deploy/configs/deploy.yaml` - 统一部署配置文件
 
 ### 配置文件

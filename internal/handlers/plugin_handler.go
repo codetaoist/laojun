@@ -27,12 +27,35 @@ func NewPluginHandler(pluginService *services.PluginService) *PluginHandler {
 
 // GetPlugins 获取插件列表
 func (h *PluginHandler) GetPlugins(c *gin.Context) {
-	// 解析查询参数
+	// 解析查询参数（兼容多种前端键）
+	query := c.Query("q")
+	if query == "" {
+		query = c.Query("keyword")
+	}
+	if query == "" {
+		query = c.Query("query") // 前端 mapSearchParams 可能使用 query
+	}
 	params := models.PluginSearchParams{
 		Page:   1,
 		Limit:  20,
-		Query:  c.Query("q"),
+		Query:  query,
 		SortBy: c.Query("sort_by"),
+	}
+
+	// 兼容 sort 参数（latest、downloads、rating、name）
+	if sort := c.Query("sort"); sort != "" {
+		switch sort {
+		case "latest":
+			params.SortBy = "created_at"
+		case "downloads":
+			params.SortBy = "downloads"
+		case "rating":
+			params.SortBy = "rating"
+		case "name":
+			params.SortBy = "name"
+		default:
+			params.SortBy = sort
+		}
 	}
 
 	// 解析页码
@@ -160,38 +183,6 @@ func (h *PluginHandler) GetPluginsByCategory(c *gin.Context) {
 	utils.PaginatedResponse(c, plugins, meta)
 }
 
-// ToggleFavorite 切换收藏状态
-func (h *PluginHandler) ToggleFavorite(c *gin.Context) {
-	// 获取用户ID
-	userID, exists := c.Get("user_id")
-	if !exists {
-		utils.UnauthorizedResponse(c)
-		return
-	}
-
-	pluginIDStr := c.Param("id")
-	pluginID, err := uuid.Parse(pluginIDStr)
-	if err != nil {
-		utils.BadRequestResponse(c, "Invalid plugin ID")
-		return
-	}
-
-	isFavorited, err := h.pluginService.ToggleFavorite(userID.(uuid.UUID), pluginID)
-	if err != nil {
-		utils.InternalServerErrorResponse(c, "Failed to toggle favorite")
-		return
-	}
-
-	message := "Plugin removed from favorites"
-	if isFavorited {
-		message = "Plugin added to favorites"
-	}
-
-	utils.SuccessResponseWithMessage(c, message, gin.H{
-		"is_favorited": isFavorited,
-	})
-}
-
 // GetUserFavorites 获取用户收藏的插件
 func (h *PluginHandler) GetUserFavorites(c *gin.Context) {
 	// 获取用户ID
@@ -287,6 +278,25 @@ func (h *PluginHandler) GetUserPurchases(c *gin.Context) {
 	}
 
 	utils.PaginatedResponse(c, purchases, meta)
+}
+
+// GetMarketplacePluginStats 市场插件统计（简化聚合）
+func (h *PluginHandler) GetMarketplacePluginStats(c *gin.Context) {
+	params := models.PluginSearchParams{
+		Page:  1,
+		Limit: 1,
+	}
+	_, meta, err := h.pluginService.GetPlugins(params)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "Failed to get plugin stats")
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"total":     meta.Total,
+		"installed": 0,
+		"updated":   0,
+	})
 }
 
 // CreatePlugin 创建插件
@@ -398,4 +408,36 @@ func (h *PluginHandler) UpdatePluginStatus(c *gin.Context) {
 	}
 
 	utils.SuccessResponseWithMessage(c, "Plugin status updated successfully", nil)
+}
+
+// ToggleFavorite 切换收藏状态
+func (h *PluginHandler) ToggleFavorite(c *gin.Context) {
+	// 获取用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.UnauthorizedResponse(c)
+		return
+	}
+
+	pluginIDStr := c.Param("id")
+	pluginID, err := uuid.Parse(pluginIDStr)
+	if err != nil {
+		utils.BadRequestResponse(c, "Invalid plugin ID")
+		return
+	}
+
+	isFavorited, err := h.pluginService.ToggleFavorite(userID.(uuid.UUID), pluginID)
+	if err != nil {
+		utils.InternalServerErrorResponse(c, "Failed to toggle favorite")
+		return
+	}
+
+	message := "Plugin removed from favorites"
+	if isFavorited {
+		message = "Plugin added to favorites"
+	}
+
+	utils.SuccessResponseWithMessage(c, message, gin.H{
+		"is_favorited": isFavorited,
+	})
 }
