@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"crypto/rand"
 	"encoding/base64"
@@ -18,17 +19,17 @@ import (
 
 // AuthHandler 认证处理
 type AuthHandler struct {
-	authService *services.AuthService
-	jwtManager  *auth.JWTManager
-	cfg         *sharedconfig.Config
+	adminAuthService *services.AdminAuthService
+	jwtManager       *auth.JWTManager
+	cfg              *sharedconfig.Config
 }
 
 // NewAuthHandler 创建认证处理
-func NewAuthHandler(authService *services.AuthService, jwtManager *auth.JWTManager, cfg *sharedconfig.Config) *AuthHandler {
+func NewAuthHandler(adminAuthService *services.AdminAuthService, jwtManager *auth.JWTManager, cfg *sharedconfig.Config) *AuthHandler {
 	return &AuthHandler{
-		authService: authService,
-		jwtManager:  jwtManager,
-		cfg:         cfg,
+		adminAuthService: adminAuthService,
+		jwtManager:       jwtManager,
+		cfg:              cfg,
 	}
 }
 
@@ -43,32 +44,13 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.authService.Register(&req)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-
-	// 生成JWT token
-	token, expiresAt, err := h.jwtManager.GenerateToken(&user.User, false)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "生成token失败",
-		})
-		return
-	}
-
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "注册成功",
-		"data": services.AuthResponse{
-			User:      user,
-			Token:     token,
-			ExpiresAt: expiresAt.Unix(),
-		},
+	// 后台管理系统不支持注册功能
+	c.JSON(http.StatusMethodNotAllowed, gin.H{
+		"error": "后台管理系统不支持注册功能",
 	})
 }
+
+
 
 // Login 用户登录
 func (h *AuthHandler) Login(c *gin.Context) {
@@ -90,6 +72,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	// 根据配置决定是否校验验证码
+	// 添加调试日志
+	fmt.Printf("DEBUG: EnableCaptcha = %v\n", h.cfg.Security.EnableCaptcha)
 	if h.cfg != nil && h.cfg.Security.EnableCaptcha {
 		if req.Captcha == "" || req.CaptchaKey == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "缺少验证码参数"})
@@ -106,8 +90,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		}
 	}
 
-	loginReq := services.LoginRequest{Username: req.Username, Password: req.Password, Remember: req.Remember}
-	user, err := h.authService.Login(&loginReq)
+	loginReq := services.AdminLoginRequest{Username: req.Username, Password: req.Password, Remember: req.Remember}
+	user, err := h.adminAuthService.Login(&loginReq)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": err.Error(),
@@ -115,22 +99,20 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// 生成JWT token
-	token, expiresAt, err := h.jwtManager.GenerateToken(&user.User, false)
+	// 生成 JWT token
+	token, expiresAt, err := h.jwtManager.GenerateToken(&user.User, true) // 后台用户默认为管理员
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "生成token失败",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "生成token失败"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "登录成功",
-		"data": services.AuthResponse{
-			User:      user,
-			Token:     token,
-			ExpiresAt: expiresAt.Unix(),
+		"data": gin.H{
+			"user":      user,
+			"token":     token,
+			"expiresAt": expiresAt,
 		},
+		"message": "登录成功",
 	})
 }
 
@@ -191,16 +173,30 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 		return
 	}
 
-	userID, ok := userIDInterface.(uuid.UUID)
-	if !ok {
+	var userID uuid.UUID
+	var err error
+
+	// 支持string和uuid.UUID两种类型
+	switch v := userIDInterface.(type) {
+	case uuid.UUID:
+		userID = v
+	case string:
+		userID, err = uuid.Parse(v)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "用户ID格式错误",
+			})
+			return
+		}
+	default:
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "用户信息格式错误",
 		})
 		return
 	}
 
-	// 获取完整的marketplace用户信息
-	marketplaceUser, err := h.authService.GetUserByID(userID)
+	// 获取完整的后台用户信息
+	adminUser, err := h.adminAuthService.GetUserByID(userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "用户不存在",
@@ -210,117 +206,23 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "获取成功",
-		"data":    marketplaceUser,
+		"data":    adminUser,
 	})
 }
 
 // UpdateProfile 更新用户资料
 func (h *AuthHandler) UpdateProfile(c *gin.Context) {
-	// 从认证中间件获取用户ID
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "未授权访问",
-		})
-		return
-	}
-
-	userID, ok := userIDInterface.(uuid.UUID)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "用户信息格式错误",
-		})
-		return
-	}
-
-	var req struct {
-		Username string `json:"username"`
-		Email    string `json:"email"`
-		FullName string `json:"full_name"`
-		Avatar   string `json:"avatar"`
-		Bio      string `json:"bio"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "请求参数错误",
-		})
-		return
-	}
-
-	// 构建更新字段
-	updates := make(map[string]interface{})
-	if req.Username != "" {
-		updates["username"] = req.Username
-	}
-	if req.Email != "" {
-		updates["email"] = req.Email
-	}
-	if req.FullName != "" {
-		updates["full_name"] = req.FullName
-	}
-	if req.Avatar != "" {
-		updates["avatar"] = req.Avatar
-	}
-	if req.Bio != "" {
-		updates["bio"] = req.Bio
-	}
-
-	updatedUser, err := h.authService.UpdateProfile(userID, updates)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "更新失败: " + err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "更新成功",
-		"data":    updatedUser,
+	// 后台管理系统暂不支持更新用户资料功能
+	c.JSON(http.StatusMethodNotAllowed, gin.H{
+		"error": "后台管理系统暂不支持更新用户资料功能",
 	})
 }
 
 // ChangePassword 修改密码
 func (h *AuthHandler) ChangePassword(c *gin.Context) {
-	// 从认证中间件获取用户ID
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "未授权访问",
-		})
-		return
-	}
-
-	userID, ok := userIDInterface.(uuid.UUID)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "用户信息格式错误",
-		})
-		return
-	}
-
-	var req struct {
-		OldPassword string `json:"old_password" binding:"required"`
-		NewPassword string `json:"new_password" binding:"required,min=6"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "请求参数错误",
-		})
-		return
-	}
-
-	err := h.authService.ChangePassword(userID, req.OldPassword, req.NewPassword)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "密码修改成功",
+	// 后台管理系统暂不支持修改密码功能
+	c.JSON(http.StatusMethodNotAllowed, gin.H{
+		"error": "后台管理系统暂不支持修改密码功能",
 	})
 }
 

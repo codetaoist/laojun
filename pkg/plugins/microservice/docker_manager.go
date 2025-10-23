@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	typesimage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
@@ -540,7 +539,7 @@ func (dm *DockerManager) updateContainerStats(containerID string) error {
 	}
 	defer stats.Body.Close()
 
-	var statsData types.StatsJSON
+	var statsData container.StatsResponse
 	if err := json.NewDecoder(stats.Body).Decode(&statsData); err != nil {
 		return err
 	}
@@ -591,7 +590,7 @@ func (dm *DockerManager) updateContainerStats(containerID string) error {
 }
 
 // calculateCPUPercent 计算CPU使用百分比
-func calculateCPUPercent(stats *types.StatsJSON) float64 {
+func calculateCPUPercent(stats *container.StatsResponse) float64 {
 	cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage - stats.PreCPUStats.CPUUsage.TotalUsage)
 	systemDelta := float64(stats.CPUStats.SystemUsage - stats.PreCPUStats.SystemUsage)
 	

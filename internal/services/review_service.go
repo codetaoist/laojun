@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/codetaoist/laojun/pkg/shared/database"
+	shareddb "github.com/codetaoist/laojun/pkg/shared/database"
 	"github.com/codetaoist/laojun/pkg/shared/models"
 	"github.com/google/uuid"
 )
 
 // ReviewService 评论服务
 type ReviewService struct {
-	db *database.DB
+	db *shareddb.DB
 }
 
 // NewReviewService 创建评论服务
-func NewReviewService(db *database.DB) *ReviewService {
+func NewReviewService(db *shareddb.DB) *ReviewService {
 	return &ReviewService{db: db}
 }
 

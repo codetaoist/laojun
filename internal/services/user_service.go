@@ -36,7 +36,7 @@ func (s *UserService) GetUsers(page, size int, search string) (*models.UserListR
 	}
 
 	// 查询总数
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM lj_users %s", whereClause)
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM ua_admin %s", whereClause)
 	var total int64
 	err := s.db.QueryRow(countQuery, args...).Scan(&total)
 	if err != nil {
@@ -46,7 +46,7 @@ func (s *UserService) GetUsers(page, size int, search string) (*models.UserListR
 	// 查询用户列表
 	query := fmt.Sprintf(`
 		SELECT id, username, email, avatar, bio, is_active, created_at, updated_at, last_login_at
-		FROM lj_users %s
+		FROM ua_admin %s
 		ORDER BY created_at DESC
 		LIMIT $%d OFFSET $%d
 	`, whereClause, argIndex, argIndex+1)
@@ -84,7 +84,7 @@ func (s *UserService) GetUsers(page, size int, search string) (*models.UserListR
 func (s *UserService) GetUserByID(id uuid.UUID) (*models.UserResponse, error) {
 	query := `
 		SELECT id, username, email, avatar, bio, is_active, created_at, updated_at, last_login_at
-		FROM lj_users WHERE id = $1
+		FROM ua_admin WHERE id = $1
 	`
 
 	var user models.UserResponse
@@ -131,7 +131,7 @@ func (s *UserService) CreateUser(req *models.UserCreateRequest) (*models.UserRes
 	now := time.Now()
 
 	query := `
-		INSERT INTO lj_users (id, username, email, password_hash, avatar, bio, is_active, created_at, updated_at)
+		INSERT INTO ua_admin (id, username, email, password_hash, avatar, bio, is_active, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
@@ -200,7 +200,7 @@ func (s *UserService) UpdateUser(id uuid.UUID, req *models.UserUpdateRequest) (*
 
 	// 正确构建SQL查询
 	setClause := strings.Join(setParts, ", ")
-	query := fmt.Sprintf("UPDATE lj_users SET %s WHERE id = $%d", setClause, argIndex)
+	query := fmt.Sprintf("UPDATE ua_admin SET %s WHERE id = $%d", setClause, argIndex)
 	args = append(args, id)
 
 	_, err = s.db.Exec(query, args...)
@@ -213,7 +213,7 @@ func (s *UserService) UpdateUser(id uuid.UUID, req *models.UserUpdateRequest) (*
 
 // DeleteUser 删除用户
 func (s *UserService) DeleteUser(id uuid.UUID) error {
-	query := "DELETE FROM lj_users WHERE id = $1"
+	query := "DELETE FROM ua_admin WHERE id = $1"
 	result, err := s.db.Exec(query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
@@ -235,7 +235,7 @@ func (s *UserService) DeleteUser(id uuid.UUID) error {
 func (s *UserService) ChangePassword(id uuid.UUID, req *models.ChangePasswordRequest) error {
 	// 获取当前密码哈希
 	var currentHash string
-	query := "SELECT password_hash FROM lj_users WHERE id = $1"
+	query := "SELECT password_hash FROM ua_admin WHERE id = $1"
 	err := s.db.QueryRow(query, id).Scan(&currentHash)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -257,7 +257,7 @@ func (s *UserService) ChangePassword(id uuid.UUID, req *models.ChangePasswordReq
 	}
 
 	// 更新密码
-	updateQuery := "UPDATE lj_users SET password_hash = $1, updated_at = $2 WHERE id = $3"
+	updateQuery := "UPDATE ua_admin SET password_hash = $1, updated_at = $2 WHERE id = $3"
 	_, err = s.db.Exec(updateQuery, string(newHash), time.Now(), id)
 	if err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
@@ -270,7 +270,7 @@ func (s *UserService) ChangePassword(id uuid.UUID, req *models.ChangePasswordReq
 func (s *UserService) ResetPassword(id uuid.UUID, req *models.ResetPasswordRequest) error {
 	// 检查用户是否存在
 	var exists bool
-	query := "SELECT EXISTS(SELECT 1 FROM lj_users WHERE id = $1)"
+	query := "SELECT EXISTS(SELECT 1 FROM ua_admin WHERE id = $1)"
 	err := s.db.QueryRow(query, id).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("failed to check user existence: %w", err)
@@ -286,7 +286,7 @@ func (s *UserService) ResetPassword(id uuid.UUID, req *models.ResetPasswordReque
 	}
 
 	// 更新密码
-	updateQuery := "UPDATE lj_users SET password_hash = $1, updated_at = $2 WHERE id = $3"
+	updateQuery := "UPDATE ua_admin SET password_hash = $1, updated_at = $2 WHERE id = $3"
 	_, err = s.db.Exec(updateQuery, string(newHash), time.Now(), id)
 	if err != nil {
 		return fmt.Errorf("failed to reset password: %w", err)
@@ -297,7 +297,7 @@ func (s *UserService) ResetPassword(id uuid.UUID, req *models.ResetPasswordReque
 
 // checkUserExists 检查用户名或邮箱是否已存在
 func (s *UserService) checkUserExists(username, email string) (bool, error) {
-	query := "SELECT COUNT(*) FROM lj_users WHERE username = $1 OR email = $2"
+	query := "SELECT COUNT(*) FROM ua_admin WHERE username = $1 OR email = $2"
 	var count int
 	err := s.db.QueryRow(query, username, email).Scan(&count)
 	if err != nil {
@@ -310,8 +310,8 @@ func (s *UserService) checkUserExists(username, email string) (bool, error) {
 func (s *UserService) getUserRoles(userID uuid.UUID) ([]models.Role, error) {
 	query := `
 		SELECT r.id, r.name, r.display_name, r.description, r.is_system, r.created_at, r.updated_at
-		FROM lj_roles r
-		INNER JOIN lj_user_roles ur ON r.id = ur.role_id
+		FROM az_roles r
+		INNER JOIN az_user_roles ur ON r.id = ur.role_id
 		WHERE ur.user_id = $1 AND r.id IS NOT NULL
 		ORDER BY r.is_system DESC, r.name ASC
 	`
@@ -353,9 +353,9 @@ func (s *UserService) getUserRoles(userID uuid.UUID) ([]models.Role, error) {
 func (s *UserService) ValidateUserRoleConsistency(userID uuid.UUID) error {
 	// 检查是否存在孤立的用户角色关联
 	query := `
-		SELECT COUNT(*) FROM lj_user_roles ur
-		LEFT JOIN lj_users u ON ur.user_id = u.id
-		LEFT JOIN lj_roles r ON ur.role_id = r.id
+		SELECT COUNT(*) FROM az_user_roles ur
+		LEFT JOIN ua_admin u ON ur.user_id = u.id
+		LEFT JOIN az_roles r ON ur.role_id = r.id
 		WHERE ur.user_id = $1 AND (u.id IS NULL OR r.id IS NULL)
 	`
 
@@ -368,10 +368,10 @@ func (s *UserService) ValidateUserRoleConsistency(userID uuid.UUID) error {
 	if orphanCount > 0 {
 		// 清理孤立的关联记录
 		cleanupQuery := `
-			DELETE FROM lj_user_roles 
+			DELETE FROM az_user_roles 
 			WHERE user_id = $1 AND (
-				NOT EXISTS (SELECT 1 FROM lj_users WHERE id = user_id) OR
-				NOT EXISTS (SELECT 1 FROM lj_roles WHERE id = role_id)
+				NOT EXISTS (SELECT 1 FROM ua_admin WHERE id = user_id) OR
+				NOT EXISTS (SELECT 1 FROM az_roles WHERE id = role_id)
 			)
 		`
 		_, err = s.db.Exec(cleanupQuery, userID)

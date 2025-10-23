@@ -1,0 +1,120 @@
+# 生产环境多阶段构建 Dockerfile
+# 第一阶段：前端构建
+FROM node:18-alpine AS frontend-builder
+
+# 设置工作目录
+WORKDIR /app
+
+# 安装 pnpm
+RUN npm install -g pnpm
+
+# 构建管理后台前端
+COPY web/admin/package.json web/admin/pnpm-lock.yaml ./admin/
+WORKDIR /app/admin
+RUN pnpm install --frozen-lockfile
+
+COPY web/admin/ ./
+RUN pnpm build
+
+# 构建市场前端
+WORKDIR /app
+COPY web/marketplace/package.json web/marketplace/pnpm-lock.yaml ./marketplace/
+WORKDIR /app/marketplace
+RUN pnpm install --frozen-lockfile
+
+COPY web/marketplace/ ./
+RUN pnpm build
+
+# 第二阶段：后端构建
+FROM golang:1.21-alpine AS backend-builder
+
+# 设置工作目录
+WORKDIR /app
+
+# 安装必要的包
+RUN apk add --no-cache git ca-certificates tzdata
+
+# 复制 go mod 文件
+COPY go.mod go.sum go.work go.work.sum ./
+
+# 复制子模块的 go.mod 文件
+COPY pkg/plugins/go.mod ./pkg/plugins/
+COPY pkg/shared/go.mod ./pkg/shared/
+COPY tools/debug/go.mod ./tools/debug/
+COPY tools/plugin-cli/go.mod ./tools/plugin-cli/
+COPY tools/swagger/go.mod ./tools/swagger/
+
+# 下载依赖
+RUN go mod download
+
+# 复制源代码
+COPY . .
+
+# 构建所有服务
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags='-w -s -extldflags "-static"' \
+    -a -installsuffix cgo \
+    -o admin-api ./cmd/admin-api
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags='-w -s -extldflags "-static"' \
+    -a -installsuffix cgo \
+    -o config-center ./cmd/config-center
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags='-w -s -extldflags "-static"' \
+    -a -installsuffix cgo \
+    -o marketplace-api ./cmd/marketplace-api
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags='-w -s -extldflags "-static"' \
+    -a -installsuffix cgo \
+    -o db-migrate ./cmd/db-migrate
+
+# 第三阶段：Nginx + 后端服务运行时
+FROM nginx:alpine AS production
+
+# 安装必要的包
+RUN apk --no-cache add ca-certificates tzdata supervisor
+
+# 创建非 root 用户
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
+# 创建应用目录
+RUN mkdir -p /app/bin /app/configs /app/web /var/log/supervisor
+
+# 复制后端二进制文件
+COPY --from=backend-builder /app/admin-api /app/bin/
+COPY --from=backend-builder /app/config-center /app/bin/
+COPY --from=backend-builder /app/marketplace-api /app/bin/
+COPY --from=backend-builder /app/db-migrate /app/bin/
+
+# 复制前端构建产物
+COPY --from=frontend-builder /app/admin/dist /app/web/admin
+COPY --from=frontend-builder /app/marketplace/dist /app/web/marketplace
+
+# 复制配置文件
+COPY configs/ /app/configs/
+COPY db/ /app/db/
+
+# 复制配置文件
+COPY deploy/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY deploy/nginx/conf.d/ /etc/nginx/conf.d/
+
+# 复制 Supervisor 配置
+COPY deploy/supervisor/ /etc/supervisor/conf.d/
+
+# 设置权限
+RUN chown -R appuser:appgroup /app
+RUN chmod +x /app/bin/*
+
+# 暴露端口
+EXPOSE 80 8080 8081 8082
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
+
+# 启动 Supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

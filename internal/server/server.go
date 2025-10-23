@@ -67,7 +67,7 @@ func NewServer(cfg *config.Config) (*Server, error) {
 	categoryHandler := handlers.NewCategoryHandler(categoryService)
 	reviewHandler := handlers.NewReviewHandler(reviewService)
 	developerHandler := handlers.NewDeveloperHandler(developerService)
-	authHandler := handlers.NewAuthHandler(authService, jwtManager, cfg)
+	authHandler := handlers.NewMarketplaceAuthHandler(authService, jwtManager, cfg)
 	communityHandler := handlers.NewCommunityHandler(communityService)
 	extendedPluginHandler := handlers.NewExtendedPluginHandler(extendedPluginService, categoryService)
 
@@ -259,6 +259,11 @@ func NewServer(cfg *config.Config) (*Server, error) {
 // Start 启动服务
 func (s *Server) Start(addr string) error {
 	return s.router.Run(addr)
+}
+
+// GetRouter 获取路由器实例
+func (s *Server) GetRouter() *gin.Engine {
+	return s.router
 }
 
 // Close 关闭服务

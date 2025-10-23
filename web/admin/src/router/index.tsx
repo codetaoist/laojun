@@ -13,6 +13,7 @@ const RoleManagement = lazy(() => import('@/pages/RoleManagement'));
 const PermissionManagement = lazy(() => import('@/pages/PermissionManagement'));
 const MenuManagement = lazy(() => import('@/pages/MenuManagement'));
 const PluginManagement = lazy(() => import('@/pages/PluginManagement'));
+const PluginReviewManagement = lazy(() => import('@/pages/PluginReviewManagement'));
 const SystemSettings = lazy(() => import('@/pages/SystemSettings'));
 const Profile = lazy(() => import('@/pages/Profile'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
@@ -103,6 +104,14 @@ export const router = createBrowserRouter([
         element: (
           <LoadingWrapper>
             <PluginManagement />
+          </LoadingWrapper>
+        ),
+      },
+      {
+        path: 'plugin-review',
+        element: (
+          <LoadingWrapper>
+            <PluginReviewManagement />
           </LoadingWrapper>
         ),
       },

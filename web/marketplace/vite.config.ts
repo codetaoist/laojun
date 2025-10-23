@@ -19,12 +19,12 @@ export default defineConfig({
     port: 5174,
     host: true,
     proxy: {
-      '/api/v1': {
-        target: 'http://localhost:8081',
-        changeOrigin: true,
-        secure: false,
+        '/api/v1': {
+          target: 'http://localhost:8081',
+          changeOrigin: true,
+          secure: false,
+        },
       },
-    },
   },
   build: {
     outDir: '../../../var/www/laojun/marketplace-web',

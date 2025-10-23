@@ -3,115 +3,149 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"path/filepath"
+
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4/source/file"
 )
 
 // Migrator 数据库迁移器
 type Migrator struct {
-	db *sql.DB
+	db          *sql.DB
+	migrationsPath string
 }
 
 // NewMigrator 创建新的迁移器
 func NewMigrator(db *sql.DB) *Migrator {
-	return &Migrator{db: db}
+	return &Migrator{
+		db:             db,
+		migrationsPath: "d:/taishanglaojun/db/migrations",
+	}
 }
 
 // RunMigrations 执行数据库迁移
 func (m *Migrator) RunMigrations() error {
 	log.Println("开始执行数据库迁移...")
 
-	// 创建迁移记录表
-	if err := m.createMigrationTable(); err != nil {
-		return fmt.Errorf("创建迁移记录表失败: %v", err)
-	}
-
-	// 检查是否已经执行过迁移
-	if migrated, err := m.isMigrated(); err != nil {
-		return fmt.Errorf("检查迁移状态失败: %v", err)
-	} else if migrated {
-		// 进一步校验关键社区表是否存在
-		exists, err := m.essentialTablesExist()
-		if err != nil {
-			return fmt.Errorf("检查关键表失败: %v", err)
-		}
-		if exists {
-			log.Println("数据库迁移已经执行过，关键表存在，跳过迁移")
-			return nil
-		}
-		log.Println("检测到关键社区表缺失，仍将执行迁移SQL以补全")
-	}
-
-	// 读取迁移文件
-	migrationFile := filepath.Join("sql", "migration.sql")
-	sqlContent, err := ioutil.ReadFile(migrationFile)
+	// 创建 migrate 实例
+	migrator, err := m.createMigrator()
 	if err != nil {
-		return fmt.Errorf("读取迁移文件失败: %v", err)
+		return fmt.Errorf("创建迁移器失败: %v", err)
+	}
+	// 注意：不调用 migrator.Close() 以避免关闭底层数据库连接
+
+	// 获取当前版本
+	currentVersion, dirty, err := migrator.Version()
+	if err != nil && err != migrate.ErrNilVersion {
+		return fmt.Errorf("获取当前迁移版本失败: %v", err)
 	}
 
-	// 执行迁移SQL
-	if _, err := m.db.Exec(string(sqlContent)); err != nil {
-		return fmt.Errorf("执行迁移SQL失败: %v", err)
+	if dirty {
+		return fmt.Errorf("数据库处于脏状态，请手动修复")
 	}
 
-	// 记录迁移完成
-	if err := m.markMigrated(); err != nil {
-		return fmt.Errorf("记录迁移状态失败: %v", err)
+	// 执行迁移到最新版本
+	err = migrator.Up()
+	if err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("执行迁移失败: %v", err)
 	}
 
-	log.Println("数据库迁移执行完成")
+	if err == migrate.ErrNoChange {
+		log.Printf("数据库已是最新版本 (v%d)，无需迁移", currentVersion)
+	} else {
+		newVersion, _, _ := migrator.Version()
+		log.Printf("数据库迁移完成，从版本 %d 升级到版本 %d", currentVersion, newVersion)
+	}
+
 	return nil
 }
 
-// createMigrationTable 创建迁移记录表
-func (m *Migrator) createMigrationTable() error {
-	query := `
-		CREATE TABLE IF NOT EXISTS schema_migrations (
-			id SERIAL PRIMARY KEY,
-			version VARCHAR(255) NOT NULL,
-			applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-			UNIQUE(version)
-		)
-	`
-	_, err := m.db.Exec(query)
-	return err
-}
-
-// isMigrated 检查是否已经执行过迁移
-func (m *Migrator) isMigrated() (bool, error) {
-	var count int
-	query := "SELECT COUNT(*) FROM schema_migrations WHERE version = 'marketplace_v1'"
-	err := m.db.QueryRow(query).Scan(&count)
+// createMigrator 创建 migrate 实例
+func (m *Migrator) createMigrator() (*migrate.Migrate, error) {
+	// 创建数据库驱动
+	driver, err := postgres.WithInstance(m.db, &postgres.Config{})
 	if err != nil {
-		return false, err
+		return nil, fmt.Errorf("创建数据库驱动失败: %v", err)
 	}
-	return count > 0, nil
+
+	// 获取迁移文件路径
+	migrationsPath, err := filepath.Abs(m.migrationsPath)
+	if err != nil {
+		return nil, fmt.Errorf("获取迁移文件路径失败: %v", err)
+	}
+
+	// 创建文件源，使用正确的 file:// URL 格式
+	fileURL := "file://" + filepath.ToSlash(migrationsPath)
+	fileSource, err := (&file.File{}).Open(fileURL)
+	if err != nil {
+		return nil, fmt.Errorf("打开迁移文件源失败: %v", err)
+	}
+
+	// 创建 migrate 实例
+	migrator, err := migrate.NewWithInstance("file", fileSource, "postgres", driver)
+	if err != nil {
+		return nil, fmt.Errorf("创建 migrate 实例失败: %v", err)
+	}
+
+	return migrator, nil
 }
 
-// markMigrated 标记迁移已完成
-func (m *Migrator) markMigrated() error {
-	query := "INSERT INTO schema_migrations (version) VALUES ('marketplace_v1') ON CONFLICT (version) DO NOTHING"
-	_, err := m.db.Exec(query)
-	return err
+// Rollback 回滚到指定版本
+func (m *Migrator) Rollback(version uint) error {
+	log.Printf("开始回滚数据库到版本 %d...", version)
+
+	migrator, err := m.createMigrator()
+	if err != nil {
+		return fmt.Errorf("创建迁移器失败: %v", err)
+	}
+	// 注意：不调用 migrator.Close() 以避免关闭底层数据库连接
+
+	err = migrator.Migrate(version)
+	if err != nil {
+		return fmt.Errorf("回滚失败: %v", err)
+	}
+
+	log.Printf("数据库回滚到版本 %d 完成", version)
+	return nil
 }
 
-// essentialTablesExist 关键社区表是否存在（若缺失则需要再次执行迁移）
-func (m *Migrator) essentialTablesExist() (bool, error) {
-	names := []string{
-		"mp_users",
-		"mp_forum_categories",
-		"mp_forum_posts",
-		"mp_forum_replies",
+// GetVersion 获取当前数据库版本
+func (m *Migrator) GetVersion() (uint, bool, error) {
+	migrator, err := m.createMigrator()
+	if err != nil {
+		return 0, false, fmt.Errorf("创建迁移器失败: %v", err)
 	}
-	for _, name := range names {
-		var ok bool
-		if err := m.db.QueryRow("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = $1)", name).Scan(&ok); err != nil {
-			return false, err
-		}
-		if !ok {
-			return false, nil
-		}
+	// 注意：不调用 migrator.Close() 以避免关闭底层数据库连接
+
+	version, dirty, err := migrator.Version()
+	if err != nil && err != migrate.ErrNilVersion {
+		return 0, false, fmt.Errorf("获取版本失败: %v", err)
 	}
-	return true, nil
+
+	if err == migrate.ErrNilVersion {
+		return 0, false, nil
+	}
+
+	return version, dirty, nil
+}
+
+// Reset 重置数据库（删除所有表）
+func (m *Migrator) Reset() error {
+	log.Println("开始重置数据库...")
+
+	migrator, err := m.createMigrator()
+	if err != nil {
+		return fmt.Errorf("创建迁移器失败: %v", err)
+	}
+	// 注意：不调用 migrator.Close() 以避免关闭底层数据库连接
+
+	err = migrator.Down()
+	if err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("重置数据库失败: %v", err)
+	}
+
+	log.Println("数据库重置完成")
+	return nil
 }

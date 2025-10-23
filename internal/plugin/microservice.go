@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	typesimage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
@@ -522,7 +521,7 @@ func (m *MicroservicePluginManager) GetPluginMetrics(pluginID string) (map[strin
 	defer stats.Body.Close()
 
 	// 读取统计数据
-	var containerStats types.StatsJSON
+	var containerStats container.StatsResponse
 	if err := json.NewDecoder(stats.Body).Decode(&containerStats); err != nil {
 		return nil, fmt.Errorf("failed to decode stats: %w", err)
 	}

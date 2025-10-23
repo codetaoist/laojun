@@ -83,22 +83,29 @@ api.interceptors.response.use(
 
     const { status, data } = error.response;
 
+    let errorMessage = '';
+    
     switch (status) {
       case 401:
-        console.warn('登录已过期，请重新登录');
+        errorMessage = data?.message || '用户名或密码错误';
+        console.warn(errorMessage);
         // 清除本地存储的认证信息
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
-        // 重定向到登录页
-        window.location.href = '/login';
+        // 只有在非登录页面时才重定向到登录页
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
         break;
 
       case 403:
-        console.warn('没有权限访问该资源');
+        errorMessage = '没有权限访问该资源';
+        console.warn(errorMessage);
         break;
 
       case 404:
-        console.warn('请求的资源不存在');
+        errorMessage = '请求的资源不存在';
+        console.warn(errorMessage);
         break;
 
       case 422:
@@ -106,25 +113,35 @@ api.interceptors.response.use(
         const validationErrors = data?.errors;
         if (validationErrors && typeof validationErrors === 'object') {
           const firstError = Object.values(validationErrors)[0] as any;
-          console.warn(Array.isArray(firstError) ? firstError[0] : firstError);
+          errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
         } else {
-          console.warn(data?.message || '请求参数错误');
+          errorMessage = data?.message || '请求参数错误';
         }
+        console.warn(errorMessage);
         break;
 
       case 429:
-        console.warn('请求过于频繁，请稍后再试');
+        errorMessage = '请求过于频繁，请稍后再试';
+        console.warn(errorMessage);
         break;
 
       case 500:
-        console.warn('服务器内部错误，请稍后再试');
+        errorMessage = '服务器内部错误，请稍后再试';
+        console.warn(errorMessage);
         break;
 
       default:
-        console.warn(data?.message || '请求失败');
+        errorMessage = data?.message || '请求失败';
+        console.warn(errorMessage);
     }
 
-    return Promise.reject(error);
+    // 创建一个包含错误信息的Error对象
+    const customError = new Error(errorMessage);
+    customError.name = 'APIError';
+    (customError as any).status = status;
+    (customError as any).data = data;
+
+    return Promise.reject(customError);
   }
 );
 

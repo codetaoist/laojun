@@ -1,8 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 	"io"
 	"path/filepath"
 	"strings"
@@ -51,7 +56,7 @@ func main() {
 		}
 	}
 
-	// 创建并启动服务器
+	// 创建服务器
 	srv, err := server.NewServer(cfg)
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
@@ -67,7 +72,39 @@ func main() {
 	mode := cfg.Server.Mode
 	log.Printf("Starting Marketplace API server on port %s (env=%s, mode=%s)", port, env, mode)
 
-	if err := srv.Start(":" + port); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+	// 创建HTTP服务器
+	httpServer := &http.Server{
+		Addr:    ":" + port,
+		Handler: srv.GetRouter(),
 	}
+
+	// 在goroutine中启动服务器
+	go func() {
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	// 等待中断信号
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Printf("Shutting down server...")
+
+	// 优雅关闭
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	
+	// 关闭HTTP服务器
+	if err := httpServer.Shutdown(ctx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
+	}
+	
+	// 关闭数据库连接
+	if err := srv.Close(); err != nil {
+		log.Printf("Failed to close server resources: %v", err)
+	}
+
+	log.Printf("Server exiting")
 }

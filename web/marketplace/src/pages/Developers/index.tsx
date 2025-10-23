@@ -260,7 +260,7 @@ const Developers: React.FC = () => {
       <div style={{ marginBottom: '24px' }}>
         <Title level={2} style={{ marginBottom: '16px' }}>
           <TeamOutlined style={{ marginRight: '8px' }} />
-          开发者社区
+          开发者
         </Title>
         
         <Row gutter={16} style={{ marginBottom: '24px' }}>

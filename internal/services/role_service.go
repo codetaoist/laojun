@@ -26,7 +26,7 @@ func NewRoleService(db *sql.DB, auditService *AuditService) *RoleService {
 func (s *RoleService) AssignRolesToUserWithAudit(userID uuid.UUID, roleIDs []uuid.UUID, operatorID uuid.UUID, ipAddress, userAgent string) error {
 	// 获取用户信息
 	var username string
-	err := s.db.QueryRow("SELECT username FROM lj_users WHERE id = $1", userID).Scan(&username)
+	err := s.db.QueryRow("SELECT username FROM ua_admin WHERE id = $1", userID).Scan(&username)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return fmt.Errorf("user not found")
@@ -76,8 +76,8 @@ func (s *RoleService) AssignRolesToUserWithAudit(userID uuid.UUID, roleIDs []uui
 func (s *RoleService) getUserRolesByID(userID uuid.UUID) ([]models.Role, error) {
 	query := `
         SELECT r.id, r.name, r.display_name, r.description, r.is_system, r.created_at, r.updated_at
-        FROM lj_roles r
-        INNER JOIN lj_user_roles ur ON r.id = ur.role_id
+        FROM az_roles r
+        INNER JOIN az_user_roles ur ON r.id = ur.role_id
         WHERE ur.user_id = $1
         ORDER BY r.name
     `
@@ -112,7 +112,7 @@ func (s *RoleService) GetRoles(page, size int, search string) (*models.Paginated
 
 	// 统计总数
 	var total int
-	countQuery := "SELECT COUNT(*) FROM lj_roles"
+	countQuery := "SELECT COUNT(*) FROM az_roles"
 	var where string
 	var args []interface{}
 	argIndex := 1
@@ -130,7 +130,7 @@ func (s *RoleService) GetRoles(page, size int, search string) (*models.Paginated
 	// 查询列表
 	listQuery := fmt.Sprintf(`
         SELECT id, name, display_name, description, is_system, created_at, updated_at
-        FROM lj_roles%s
+        FROM az_roles%s
         ORDER BY created_at DESC
         LIMIT $%d OFFSET $%d
     `, where, argIndex, argIndex+1)
@@ -170,7 +170,7 @@ func (s *RoleService) GetRoleByID(id uuid.UUID) (*models.Role, error) {
 	var r models.Role
 	err := s.db.QueryRow(`
         SELECT id, name, display_name, description, is_system, created_at, updated_at
-        FROM lj_roles WHERE id = $1
+        FROM az_roles WHERE id = $1
     `, id).Scan(&r.ID, &r.Name, &r.DisplayName, &r.Description, &r.IsSystem, &r.CreatedAt, &r.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -186,7 +186,7 @@ func (s *RoleService) CreateRole(req models.RoleCreateRequest) (*models.Role, er
 	id := uuid.New()
 	now := time.Now()
 	_, err := s.db.Exec(`
-        INSERT INTO lj_roles (id, name, display_name, description, is_system, created_at, updated_at)
+        INSERT INTO az_roles (id, name, display_name, description, is_system, created_at, updated_at)
         VALUES ($1, $2, $3, $4, false, $5, $6)
     `, id, req.Name, req.DisplayName, nullOrString(req.Description), now, now)
 	if err != nil {
@@ -199,7 +199,7 @@ func (s *RoleService) CreateRole(req models.RoleCreateRequest) (*models.Role, er
 func (s *RoleService) UpdateRole(id uuid.UUID, req models.RoleUpdateRequest) (*models.Role, error) {
 	now := time.Now()
 	_, err := s.db.Exec(`
-        UPDATE lj_roles SET display_name = $1, description = $2, updated_at = $3 WHERE id = $4
+        UPDATE az_roles SET display_name = $1, description = $2, updated_at = $3 WHERE id = $4
     `, req.DisplayName, nullOrString(req.Description), now, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update role: %w", err)
@@ -209,7 +209,7 @@ func (s *RoleService) UpdateRole(id uuid.UUID, req models.RoleUpdateRequest) (*m
 
 // DeleteRole 删除角色
 func (s *RoleService) DeleteRole(id uuid.UUID) error {
-	_, err := s.db.Exec("DELETE FROM lj_roles WHERE id = $1", id)
+	_, err := s.db.Exec("DELETE FROM az_roles WHERE id = $1", id)
 	if err != nil {
 		return fmt.Errorf("failed to delete role: %w", err)
 	}
@@ -220,7 +220,7 @@ func (s *RoleService) DeleteRole(id uuid.UUID) error {
 func (s *RoleService) AssignRolesToUser(userID uuid.UUID, roleIDs []uuid.UUID) error {
 	// 验证用户是否存在
 	var userExists bool
-	err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM lj_users WHERE id = $1)", userID).Scan(&userExists)
+	err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM ua_admin WHERE id = $1)", userID).Scan(&userExists)
 	if err != nil {
 		return fmt.Errorf("failed to check user existence: %w", err)
 	}
@@ -238,7 +238,7 @@ func (s *RoleService) AssignRolesToUser(userID uuid.UUID, roleIDs []uuid.UUID) e
 		}
 
 		var roleCount int
-		query := fmt.Sprintf("SELECT COUNT(*) FROM lj_roles WHERE id IN (%s)", strings.Join(placeholders, ","))
+		query := fmt.Sprintf("SELECT COUNT(*) FROM az_roles WHERE id IN (%s)", strings.Join(placeholders, ","))
 		err = s.db.QueryRow(query, args...).Scan(&roleCount)
 		if err != nil {
 			return fmt.Errorf("failed to validate roles: %w", err)
@@ -269,7 +269,7 @@ func (s *RoleService) AssignRolesToUser(userID uuid.UUID, roleIDs []uuid.UUID) e
 
 	// 记录操作前的角色状态（用于审计日志）
 	var oldRoleIDs []uuid.UUID
-	rows, queryErr := tx.Query("SELECT role_id FROM lj_user_roles WHERE user_id = $1", userID)
+	rows, queryErr := tx.Query("SELECT role_id FROM az_user_roles WHERE user_id = $1", userID)
 	if queryErr != nil {
 		err = fmt.Errorf("failed to query existing roles: %w", queryErr)
 		return err
@@ -286,14 +286,14 @@ func (s *RoleService) AssignRolesToUser(userID uuid.UUID, roleIDs []uuid.UUID) e
 	rows.Close()
 
 	// 清空用户现有角色
-	if _, execErr := tx.Exec("DELETE FROM lj_user_roles WHERE user_id = $1", userID); execErr != nil {
+	if _, execErr := tx.Exec("DELETE FROM az_user_roles WHERE user_id = $1", userID); execErr != nil {
 		err = fmt.Errorf("failed to clear user roles: %w", execErr)
 		return err
 	}
 
 	// 批量插入新角色关联
 	for _, roleID := range roleIDs {
-		if _, execErr := tx.Exec("INSERT INTO lj_user_roles (user_id, role_id) VALUES ($1, $2)", userID, roleID); execErr != nil {
+		if _, execErr := tx.Exec("INSERT INTO az_user_roles (user_id, role_id) VALUES ($1, $2)", userID, roleID); execErr != nil {
 			err = fmt.Errorf("failed to assign role %s: %w", roleID, execErr)
 			return err
 		}
@@ -316,8 +316,8 @@ func nullOrString(s string) interface{} {
 func (s *RoleService) GetRolePermissions(roleID uuid.UUID) ([]models.Permission, error) {
 	query := `
         SELECT p.id, p.name, p.code, p.description, p.resource, p.action, p.created_at
-        FROM lj_permissions p
-        INNER JOIN lj_role_permissions rp ON p.id = rp.permission_id
+        FROM az_permissions p
+        INNER JOIN az_role_permissions rp ON p.id = rp.permission_id
         WHERE rp.role_id = $1
         ORDER BY p.resource, p.action
     `
@@ -353,13 +353,13 @@ func (s *RoleService) AssignPermissionsToRole(roleID uuid.UUID, permissionIDs []
 	}()
 
 	// 清空角色现有权限
-	if _, err = tx.Exec("DELETE FROM lj_role_permissions WHERE role_id = $1", roleID); err != nil {
+	if _, err = tx.Exec("DELETE FROM az_role_permissions WHERE role_id = $1", roleID); err != nil {
 		return fmt.Errorf("failed to clear role permissions: %w", err)
 	}
 
 	// 批量插入新权限关联
 	for _, pid := range permissionIDs {
-		if _, err = tx.Exec("INSERT INTO lj_role_permissions (role_id, permission_id) VALUES ($1, $2)", roleID, pid); err != nil {
+		if _, err = tx.Exec("INSERT INTO az_role_permissions (role_id, permission_id) VALUES ($1, $2)", roleID, pid); err != nil {
 			return fmt.Errorf("failed to assign permission: %w", err)
 		}
 	}
@@ -371,7 +371,7 @@ func (s *RoleService) GetUserByID(id uuid.UUID) (*models.UserResponse, error) {
 	var user models.UserResponse
 	err := s.db.QueryRow(`
         SELECT id, username, email, avatar, bio, is_active, created_at, updated_at, last_login_at
-        FROM lj_users WHERE id = $1
+        FROM ua_admin WHERE id = $1
     `, id).Scan(
 		&user.ID, &user.Username, &user.Email, &user.Avatar, &user.Bio,
 		&user.IsActive, &user.CreatedAt, &user.UpdatedAt, &user.LastLoginAt,

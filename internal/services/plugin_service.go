@@ -6,18 +6,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codetaoist/laojun/pkg/shared/database"
+	shareddb "github.com/codetaoist/laojun/pkg/shared/database"
 	"github.com/codetaoist/laojun/pkg/shared/models"
 	"github.com/google/uuid"
 )
 
 // PluginService 插件服务
 type PluginService struct {
-	db *database.DB
+	db *shareddb.DB
 }
 
 // NewPluginService 创建插件服务
-func NewPluginService(db *database.DB) *PluginService {
+func NewPluginService(db *shareddb.DB) *PluginService {
 	return &PluginService{db: db}
 }
 

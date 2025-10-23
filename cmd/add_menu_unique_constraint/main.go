@@ -21,7 +21,7 @@ func main() {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbPassword, dbName)
 
-	// 连接数据库
+	// 连接数据�?
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
@@ -39,7 +39,7 @@ func main() {
 	checkConstraintQuery := `
 		SELECT constraint_name 
 		FROM information_schema.table_constraints 
-		WHERE table_name = 'lj_menus' 
+		WHERE table_name = 'sm_menus' 
 		AND constraint_type = 'UNIQUE'
 		AND constraint_name LIKE '%title%path%component%'
 	`
@@ -54,11 +54,11 @@ func main() {
 	}
 
 	// 添加唯一约束
-	fmt.Println("Adding unique constraint to lj_menus table...")
+	fmt.Println("Adding unique constraint to sm_menus table...")
 
 	addConstraintQuery := `
-		ALTER TABLE lj_menus 
-		ADD CONSTRAINT uk_lj_menus_title_path_component 
+		ALTER TABLE sm_menus 
+		ADD CONSTRAINT uk_sm_menus_title_path_component 
 		UNIQUE (title, path, component)
 	`
 
@@ -67,7 +67,7 @@ func main() {
 		log.Fatalf("Failed to add unique constraint: %v", err)
 	}
 
-	fmt.Println("Successfully added unique constraint to lj_menus table!")
+	fmt.Println("Successfully added unique constraint to sm_menus table!")
 
 	// 验证约束是否添加成功
 	err = db.QueryRow(checkConstraintQuery).Scan(&constraintName)

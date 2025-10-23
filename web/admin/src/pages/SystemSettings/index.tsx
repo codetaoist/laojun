@@ -190,24 +190,42 @@ const SystemSettings: React.FC = () => {
   const loadConfigs = useCallback(async (forceRefresh = false) => {
     const now = Date.now();
     
-    // 检查缓存是否有效
-    if (!forceRefresh && configs.length > 0 && (now - configsLastFetch) < CACHE_DURATION) {
-      console.log('使用缓存的配置数据');
-      return;
+    // 检查缓存是否有效（使用函数式状态检查）
+    if (!forceRefresh && (now - configsLastFetch) < CACHE_DURATION) {
+      // 检查当前configs状态是否有数据
+      let shouldLoadFromAPI = false;
+      setConfigs(currentConfigs => {
+        if (currentConfigs && currentConfigs.length > 0) {
+          console.log('使用缓存的配置数据');
+          return currentConfigs; // 返回当前状态，不触发更新
+        } else {
+          // 如果没有数据，标记需要从API加载
+          shouldLoadFromAPI = true;
+          return currentConfigs;
+        }
+      });
+      
+      if (!shouldLoadFromAPI) {
+        return;
+      }
     }
     
+    // 从API加载数据
     try {
       setLoading(true);
       const data = await configAPI.getConfigs();
-      setConfigs(data);
+      // 确保data是数组，如果为null或undefined则设置为空数组
+      setConfigs(Array.isArray(data) ? data : []);
       setConfigsLastFetch(now);
     } catch (err: any) {
       console.error('加载系统配置失败', err);
       message.error('加载系统配置失败');
+      // 发生错误时确保configs不为null
+      setConfigs([]);
     } finally {
       setLoading(false);
     }
-  }, [message, configs.length, configsLastFetch, CACHE_DURATION]);
+  }, [message, configsLastFetch, CACHE_DURATION]);
 
   // 加载系统信息
   const loadSystemInfo = useCallback(async () => {
@@ -269,6 +287,8 @@ const SystemSettings: React.FC = () => {
     } catch (err: any) {
       console.error('加载日志失败', err);
       message.error('加载日志失败: ' + (err.message || '未知错误'));
+      // 发生错误时确保logs不为null
+      setLogs([]);
     } finally {
       setLogsLoading(false);
     }
@@ -325,9 +345,23 @@ const SystemSettings: React.FC = () => {
     const now = Date.now();
     
     // 检查缓存是否有效（性能指标缓存时间较短，10秒）
-    if (!forceRefresh && metrics && (now - metricsLastFetch) < 10000) {
-      console.log('使用缓存的性能指标数据');
-      return;
+    if (!forceRefresh && (now - metricsLastFetch) < 10000) {
+      // 检查当前metrics状态是否有数据
+      let shouldLoadFromAPI = false;
+      setMetrics(currentMetrics => {
+        if (currentMetrics) {
+          console.log('使用缓存的性能指标数据');
+          return currentMetrics; // 返回当前状态，不触发更新
+        } else {
+          // 如果没有数据，标记需要从API加载
+          shouldLoadFromAPI = true;
+          return currentMetrics;
+        }
+      });
+      
+      if (!shouldLoadFromAPI) {
+        return;
+      }
     }
     
     try {
@@ -375,7 +409,7 @@ const SystemSettings: React.FC = () => {
     } finally {
       setMetricsLoading(false);
     }
-  }, [message, metrics, metricsLastFetch]);
+  }, [message, metricsLastFetch]);
 
   // 格式化工具（页面展示使用）
   const formatBytes = (bytes: number) => {
@@ -970,9 +1004,12 @@ const SystemSettings: React.FC = () => {
                 <Descriptions column={3} bordered>
                   <Descriptions.Item label="CPU核心数">{metrics.cpu.cores}</Descriptions.Item>
                   <Descriptions.Item label="负载均衡">
-                    {metrics.cpu.loadAverage.map((load, index) => (
-                      <Tag key={index} color="blue">{load.toFixed(2)}</Tag>
-                    ))}
+                    {metrics.cpu.loadAverage && Array.isArray(metrics.cpu.loadAverage) 
+                      ? metrics.cpu.loadAverage.map((load, index) => (
+                          <Tag key={index} color="blue">{load.toFixed(2)}</Tag>
+                        ))
+                      : <Tag color="gray">暂无数据</Tag>
+                    }
                   </Descriptions.Item>
                   <Descriptions.Item label="最后更新">
                     {dayjs(metrics.timestamp).format('YYYY-MM-DD HH:mm:ss')}

@@ -294,7 +294,7 @@ const Forum: React.FC = () => {
                   ]}
                 >
                   <List.Item.Meta
-                    avatar={<Avatar src={post.author.avatar} />}
+                    avatar={<Avatar src={post.avatar_url} />}
                     title={
                       <Space>
                         <a onClick={() => navigate(`/community/forum/${post.id}`)}>
@@ -307,7 +307,7 @@ const Forum: React.FC = () => {
                     description={
                       <Space direction="vertical" size={4}>
                         <Text type="secondary">
-                          {post.author.username} · {dayjs(post.created_at).fromNow()}
+                          {post.username} · {dayjs(post.created_at).fromNow()}
                         </Text>
                         <Text ellipsis={{ rows: 2 }}>
                           {post.content}

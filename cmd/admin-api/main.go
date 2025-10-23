@@ -16,6 +16,8 @@ import (
 
 	sharedconfig "github.com/codetaoist/laojun/pkg/shared/config"
 	shareddb "github.com/codetaoist/laojun/pkg/shared/database"
+	"github.com/codetaoist/laojun/internal/cache"
+	"github.com/codetaoist/laojun/internal/config"
 	"github.com/codetaoist/laojun/internal/database"
 	"github.com/codetaoist/laojun/internal/routes"
 	"github.com/codetaoist/laojun/internal/services"
@@ -125,25 +127,29 @@ func main() {
 	healthChecker.AddChecker(health.NewDatabaseChecker("postgres", db))
 
 	// 初始化Redis
-var redisClient *redis.Client
-if cfg.Redis.Host != "" {
-	redisClient = redis.NewClient(&redis.Options{
-		Addr:     cfg.Redis.GetRedisAddr(),
-		Password: cfg.Redis.Password,
-		DB:       cfg.Redis.DB,
-	})
-	if err := redisClient.Ping(context.Background()).Err(); err != nil {
-		log.Warn("Failed to initialize Redis, continuing without cache", "error", err)
-		redisClient = nil
-	} else {
-		healthChecker.AddChecker(health.NewRedisChecker("redis", redisClient))
+	var redisClient *redis.Client
+	if cfg.Redis.Host != "" {
+		// 创建内部配置类型
+		redisConfig := &config.RedisConfig{
+			Host:     cfg.Redis.Host,
+			Port:     cfg.Redis.Port,
+			Password: cfg.Redis.Password,
+			DB:       cfg.Redis.DB,
+		}
+		
+		// 初始化全局Redis客户端
+		if err := cache.InitRedis(redisConfig); err != nil {
+			log.Warn("Failed to initialize Redis, continuing without cache", "error", err)
+		} else {
+			redisClient = cache.GetRedisClient()
+			healthChecker.AddChecker(health.NewRedisChecker("redis", redisClient))
+		}
 	}
-}
-defer func() {
-	if redisClient != nil {
-		_ = redisClient.Close()
-	}
-}()
+	defer func() {
+		if err := cache.CloseRedis(); err != nil {
+			log.Error("Error closing Redis", "error", err)
+		}
+	}()
 
 	// 运行数据库迁移
 	if err := database.RunMigrations(db); err != nil {
@@ -161,7 +167,7 @@ defer func() {
 	}
 }()
 // 初始化服务
-authService := services.NewAuthService(sharedDB)
+adminAuthService := services.NewAdminAuthService(sharedDB)
 userService := services.NewUserService(db)
 permissionService := services.NewPermissionService(db)
 pluginService := services.NewPluginService(sharedDB)
@@ -207,7 +213,7 @@ pluginService := services.NewPluginService(sharedDB)
 	router.GET("/metrics", gin.WrapH(metricsInstance.Handler()))
 
 	// 设置业务路由
-	router = routes.SetupRoutes(authService, userService, permissionService, pluginService, redisClient, cfg, db)
+	router = routes.SetupRoutes(adminAuthService, userService, permissionService, pluginService, redisClient, cfg, db)
 	// 在最终路由上重新应用中间件链
 	middlewareChain.Apply(router)
 	// 重新添加健康与指标端点到最终路由

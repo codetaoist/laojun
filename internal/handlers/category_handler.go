@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/codetaoist/laojun/internal/services"
+	"github.com/codetaoist/laojun/pkg/shared/logger"
 	"github.com/codetaoist/laojun/pkg/shared/models"
 	"github.com/codetaoist/laojun/pkg/shared/utils"
 	"github.com/gin-gonic/gin"
@@ -31,6 +32,8 @@ func (h *CategoryHandler) GetCategories(c *gin.Context) {
 	if withStats {
 		categories, err := h.categoryService.GetCategoriesWithStats()
 		if err != nil {
+			// 记录详细错误信息
+			logger.Error("Failed to get categories with stats: ", err.Error())
 			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get categories with stats")
 			return
 		}
@@ -38,6 +41,8 @@ func (h *CategoryHandler) GetCategories(c *gin.Context) {
 	} else {
 		categories, err := h.categoryService.GetCategories()
 		if err != nil {
+			// 记录详细错误信息
+			logger.Error("Failed to get categories: ", err.Error())
 			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get categories")
 			return
 		}

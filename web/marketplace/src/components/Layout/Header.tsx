@@ -64,6 +64,17 @@ const Header: React.FC = () => {
     }
   };
 
+  // 需要登录的功能处理
+  const handleAuthRequiredAction = (action: () => void, redirectPath?: string) => {
+    if (isAuthenticated) {
+      action();
+    } else {
+      // 未登录时跳转到登录页面，并记录原本要访问的页面
+      const returnUrl = redirectPath || location.pathname;
+      navigate(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+    }
+  };
+
   // 搜索建议
   const handleSearchChange = (value: string) => {
     setSearchValue(value);
@@ -230,19 +241,25 @@ const Header: React.FC = () => {
     { key: '/community/blog', label: '技术博客', icon: <EditOutlined /> },
     { key: '/community/code', label: '代码分享', icon: <CodeOutlined /> },
     { type: 'divider' as const },
-    { key: '/upload-plugin', label: '上传插件', icon: <UploadOutlined /> },
-    { key: '/my-plugins', label: '我的插件', icon: <AppstoreOutlined /> },
-    { key: '/favorites', label: '我的收藏', icon: <HeartOutlined /> },
-    { key: '/cart', label: '购物车', icon: <ShoppingCartOutlined /> },
-    { 
-      key: 'downloads', 
-      label: `下载管理${activeDownloadsCount > 0 ? ` (${activeDownloadsCount})` : ''}`, 
-      icon: <DownloadOutlined />,
-      onClick: () => setDownloadManagerVisible(true)
-    },
-    { type: 'divider' as const },
-    { key: '/profile', label: '个人资料', icon: <UserOutlined /> },
-    { key: '/settings', label: '设置', icon: <SettingOutlined /> },
+    // 需要登录的功能
+    ...(isAuthenticated ? [
+      { key: '/upload-plugin', label: '上传插件', icon: <UploadOutlined /> },
+      { key: '/my-plugins', label: '我的插件', icon: <AppstoreOutlined /> },
+      { key: '/favorites', label: '我的收藏', icon: <HeartOutlined /> },
+      { key: '/cart', label: '购物车', icon: <ShoppingCartOutlined /> },
+      { 
+        key: 'downloads', 
+        label: `下载管理${activeDownloadsCount > 0 ? ` (${activeDownloadsCount})` : ''}`, 
+        icon: <DownloadOutlined />,
+        onClick: () => setDownloadManagerVisible(true)
+      },
+      { type: 'divider' as const },
+      { key: '/profile', label: '个人资料', icon: <UserOutlined /> },
+      { key: '/settings', label: '设置', icon: <SettingOutlined /> },
+    ] : [
+      { key: '/login', label: '登录', icon: <UserOutlined /> },
+      { key: '/login?tab=register', label: '注册', icon: <UserOutlined /> },
+    ]),
   ];
 
   return (
@@ -319,12 +336,13 @@ const Header: React.FC = () => {
         <div className="header-actions">
           {/* 下载管理器 - 桌面端 */}
           <div className="desktop-only">
-            <Badge count={activeDownloadsCount} size="small">
+            <Badge count={isAuthenticated ? activeDownloadsCount : 0} size="small">
               <Button
                 type="text"
                 icon={<DownloadOutlined />}
-                onClick={() => setDownloadManagerVisible(true)}
+                onClick={() => handleAuthRequiredAction(() => setDownloadManagerVisible(true))}
                 className="action-button"
+                title={isAuthenticated ? "下载管理" : "登录后查看下载管理"}
               >
                 下载
               </Button>
@@ -333,12 +351,13 @@ const Header: React.FC = () => {
 
           {/* 购物车 - 桌面端 */}
           <div className="desktop-only">
-            <Badge count={cartItemCount} size="small">
+            <Badge count={isAuthenticated ? cartItemCount : 0} size="small">
               <Button
                 type="text"
                 icon={<ShoppingCartOutlined />}
-                onClick={() => navigate('/cart')}
+                onClick={() => handleAuthRequiredAction(() => navigate('/cart'), '/cart')}
                 className="action-button"
+                title={isAuthenticated ? "购物车" : "登录后查看购物车"}
               >
                 购物车
               </Button>
@@ -350,8 +369,9 @@ const Header: React.FC = () => {
             <Button
               type="primary"
               icon={<UploadOutlined />}
-              onClick={() => navigate('/upload-plugin')}
+              onClick={() => handleAuthRequiredAction(() => navigate('/upload-plugin'), '/upload-plugin')}
               size="small"
+              title={isAuthenticated ? "上传插件" : "登录后上传插件"}
             >
               上传插件
             </Button>

@@ -151,31 +151,44 @@ const Login: React.FC = () => {
                   />
                 </Form.Item>
 
-                <Row gutter={12} align="middle">
-                  <Col span={16}>
-                    <Form.Item name="captcha" rules={[{ required: true, message: '请输入验证码' }]}>
+                <Form.Item name="captcha" rules={[{ required: true, message: '请输入验证码' }]}>
+                  <Row gutter={8} align="middle">
+                    <Col span={14}>
                       <Input
                         prefix={<SafetyOutlined />}
                         placeholder="请输入图片中的验证码"
                       />
-                    </Form.Item>
-                  </Col>
-                  <Col span={8}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                      <Image
-                        src={captcha?.image}
-                        alt="验证码"
-                        width={150}
-                        height={45}
-                        style={{ borderRadius: 6, objectFit: 'cover' }}
-                        preview={false}
-                      />
-                      <Button type="link" onClick={fetchCaptcha} loading={captchaRefreshing}>
-                        刷新
-                      </Button>
-                    </div>
-                  </Col>
-                </Row>
+                    </Col>
+                    <Col span={10}>
+                      <div className="captcha-container">
+                        <div 
+                          className="captcha-image-wrapper"
+                          onClick={fetchCaptcha}
+                          title="点击刷新验证码"
+                        >
+                          <Image
+                            src={captcha?.image}
+                            alt="验证码"
+                            width="100%"
+                            height={40}
+                            style={{ 
+                              borderRadius: 4, 
+                              objectFit: 'contain',
+                              border: '1px solid #d9d9d9',
+                              backgroundColor: '#fafafa'
+                            }}
+                            preview={false}
+                          />
+                          {captchaRefreshing && (
+                            <div className="captcha-loading-overlay">
+                              <div className="captcha-loading-spinner" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </Col>
+                  </Row>
+                </Form.Item>
 
                 <Form.Item>
                   <Checkbox defaultChecked>记住我</Checkbox>

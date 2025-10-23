@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/codetaoist/laojun/internal/services"
+	"github.com/codetaoist/laojun/pkg/shared/logger"
 	"github.com/codetaoist/laojun/pkg/shared/models"
 	"github.com/codetaoist/laojun/pkg/shared/utils"
 	"github.com/gin-gonic/gin"
@@ -85,6 +86,8 @@ func (h *PluginHandler) GetPlugins(c *gin.Context) {
 	// 获取插件列表
 	plugins, meta, err := h.pluginService.GetPlugins(params)
 	if err != nil {
+		// 记录详细错误信息
+		logger.Error("Failed to get plugins: ", err.Error())
 		utils.InternalServerErrorResponse(c, "Failed to get plugins")
 		return
 	}

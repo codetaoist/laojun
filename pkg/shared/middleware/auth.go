@@ -463,8 +463,8 @@ func (a *AuthMiddleware) getUserPrimaryRole(userID uuid.UUID) string {
 	var roleName string
 	query := `
 		SELECT r.name 
-		FROM lj_roles r
-		INNER JOIN lj_user_roles ur ON r.id = ur.role_id
+		FROM az_roles r
+		INNER JOIN az_user_roles ur ON r.id = ur.role_id
 		WHERE ur.user_id = $1
 		ORDER BY r.is_system DESC, r.created_at ASC
 		LIMIT 1

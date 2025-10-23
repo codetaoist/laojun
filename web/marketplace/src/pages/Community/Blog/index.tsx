@@ -60,9 +60,10 @@ const Blog: React.FC = () => {
   const loadCategories = async () => {
     try {
       const response = await communityService.getBlogCategories();
-      setCategories(response.data);
+      setCategories(response.data || []);
     } catch (error) {
       message.error('加载分类失败');
+      setCategories([]);
     }
   };
 
@@ -87,6 +88,7 @@ const Blog: React.FC = () => {
       }));
     } catch (error) {
       message.error('加载文章失败');
+      setPosts([]);
     } finally {
       setLoading(false);
     }
@@ -194,7 +196,7 @@ const Blog: React.FC = () => {
               value={selectedCategory}
               onChange={handleCategoryChange}
             >
-              {categories.map(category => (
+              {(categories || []).map(category => (
                 <Option key={category.id} value={category.id}>
                   {category.name}
                 </Option>
@@ -225,7 +227,7 @@ const Blog: React.FC = () => {
           <List
             itemLayout="vertical"
             size="large"
-            dataSource={posts}
+            dataSource={posts || []}
             pagination={{
               current: pagination.current,
               pageSize: pagination.pageSize,
@@ -348,7 +350,7 @@ const Blog: React.FC = () => {
                 rules={[{ required: true, message: '请选择分类' }]}
               >
                 <Select placeholder="请选择分类">
-                  {categories.map(category => (
+                  {(categories || []).map(category => (
                     <Option key={category.id} value={category.id}>
                       {category.name}
                     </Option>

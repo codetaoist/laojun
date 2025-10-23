@@ -404,3 +404,156 @@ type ReviewSearchParams struct {
 	Page      int       `form:"page"`
 	Limit     int       `form:"page_size"`
 }
+
+// ========== 管理员插件管理相关模型 ==========
+
+// AdminPluginSearchParams 管理员插件搜索参数
+type AdminPluginSearchParams struct {
+	Query        string     `form:"q"`
+	CategoryID   *uuid.UUID `form:"category_id"`
+	DeveloperID  *uuid.UUID `form:"developer_id"`
+	Status       *string    `form:"status"`       // pending, approved, rejected, suspended
+	ReviewStatus *string    `form:"review_status"` // pending, in_review, approved, rejected
+	Featured     *bool      `form:"featured"`
+	Free         *bool      `form:"free"`
+	MinPrice     *float64   `form:"min_price"`
+	MaxPrice     *float64   `form:"max_price"`
+	MinRating    *float64   `form:"min_rating"`
+	SortBy       string     `form:"sort_by"`    // name, rating, downloads, created_at, updated_at
+	SortOrder    string     `form:"sort_order"` // asc, desc
+	Page         int        `form:"page"`
+	Limit        int        `form:"page_size"`
+}
+
+// AdminPluginDetail 管理员插件详情
+type AdminPluginDetail struct {
+	Plugin
+	// 审核相关信息
+	ReviewStatus     string     `json:"review_status" db:"review_status"`
+	ReviewPriority   string     `json:"review_priority" db:"review_priority"`
+	ReviewerID       *uuid.UUID `json:"reviewer_id" db:"reviewer_id"`
+	ReviewNotes      *string    `json:"review_notes" db:"review_notes"`
+	ReviewedAt       *time.Time `json:"reviewed_at" db:"reviewed_at"`
+	AutoReviewScore  *float64   `json:"auto_review_score" db:"auto_review_score"`
+	AutoReviewResult *string    `json:"auto_review_result" db:"auto_review_result"`
+	
+	// 管理信息
+	AdminNotes       *string    `json:"admin_notes" db:"admin_notes"`
+	SuspendedAt      *time.Time `json:"suspended_at" db:"suspended_at"`
+	SuspendReason    *string    `json:"suspend_reason" db:"suspend_reason"`
+	
+	// 关联数据
+	Reviewer  *User     `json:"reviewer,omitempty"`
+	Developer *User     `json:"developer,omitempty"`
+}
+
+// PluginStats 插件统计信息
+type PluginStats struct {
+	PluginID         uuid.UUID `json:"plugin_id" db:"plugin_id"`
+	TotalDownloads   int       `json:"total_downloads" db:"total_downloads"`
+	MonthlyDownloads int       `json:"monthly_downloads" db:"monthly_downloads"`
+	WeeklyDownloads  int       `json:"weekly_downloads" db:"weekly_downloads"`
+	DailyDownloads   int       `json:"daily_downloads" db:"daily_downloads"`
+	TotalRevenue     float64   `json:"total_revenue" db:"total_revenue"`
+	MonthlyRevenue   float64   `json:"monthly_revenue" db:"monthly_revenue"`
+	AverageRating    float64   `json:"average_rating" db:"average_rating"`
+	TotalReviews     int       `json:"total_reviews" db:"total_reviews"`
+	ActiveUsers      int       `json:"active_users" db:"active_users"`
+	UpdatedAt        time.Time `json:"updated_at" db:"updated_at"`
+}
+
+// PluginConfig 插件配置
+type PluginConfig struct {
+	ID          uuid.UUID              `json:"id" db:"id"`
+	PluginID    uuid.UUID              `json:"plugin_id" db:"plugin_id"`
+	ConfigKey   string                 `json:"config_key" db:"config_key"`
+	ConfigValue map[string]interface{} `json:"config_value" db:"config_value"`
+	IsActive    bool                   `json:"is_active" db:"is_active"`
+	CreatedAt   time.Time              `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time              `json:"updated_at" db:"updated_at"`
+}
+
+// AdminDashboardStats 管理员仪表板统计
+type AdminDashboardStats struct {
+	// 插件统计
+	TotalPlugins     int `json:"total_plugins"`
+	PendingPlugins   int `json:"pending_plugins"`
+	ApprovedPlugins  int `json:"approved_plugins"`
+	RejectedPlugins  int `json:"rejected_plugins"`
+	SuspendedPlugins int `json:"suspended_plugins"`
+	
+	// 用户统计
+	TotalDevelopers  int `json:"total_developers"`
+	ActiveDevelopers int `json:"active_developers"`
+	NewDevelopers    int `json:"new_developers"`
+	
+	// 审核统计
+	PendingReviews   int `json:"pending_reviews"`
+	CompletedReviews int `json:"completed_reviews"`
+	AvgReviewTime    int `json:"avg_review_time"` // 平均审核时间（小时）
+	
+	// 收入统计
+	TotalRevenue   float64 `json:"total_revenue"`
+	MonthlyRevenue float64 `json:"monthly_revenue"`
+	
+	// 下载统计
+	TotalDownloads   int `json:"total_downloads"`
+	MonthlyDownloads int `json:"monthly_downloads"`
+	
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// PluginLog 插件日志
+type PluginLog struct {
+	ID        uuid.UUID              `json:"id" db:"id"`
+	PluginID  uuid.UUID              `json:"plugin_id" db:"plugin_id"`
+	UserID    *uuid.UUID             `json:"user_id" db:"user_id"`
+	Action    string                 `json:"action" db:"action"`
+	Details   map[string]interface{} `json:"details" db:"details"`
+	IPAddress *string                `json:"ip_address" db:"ip_address"`
+	UserAgent *string                `json:"user_agent" db:"user_agent"`
+	CreatedAt time.Time              `json:"created_at" db:"created_at"`
+	
+	// 关联数据
+	Plugin *Plugin `json:"plugin,omitempty"`
+	User   *User   `json:"user,omitempty"`
+}
+
+// UpdatePluginStatusRequest 更新插件状态请求
+type UpdatePluginStatusRequest struct {
+	Status string `json:"status" binding:"required,oneof=approved rejected pending"`
+	Reason string `json:"reason"`
+}
+
+// UpdatePluginConfigRequest 更新插件配置请求
+type UpdatePluginConfigRequest struct {
+	Config map[string]interface{} `json:"config" binding:"required"`
+}
+
+// SyncPluginRequest 同步插件请求
+type SyncPluginRequest struct {
+	PluginID      uuid.UUID `json:"plugin_id" binding:"required"`
+	SyncDirection string    `json:"sync_direction" binding:"required"` // "to_marketplace" 或 "from_marketplace"
+	ForceUpdate   bool      `json:"force_update"`                      // 是否强制更新
+}
+
+// BatchSyncRequest 批量同步请求
+type BatchSyncRequest struct {
+	PluginIDs []uuid.UUID `json:"plugin_ids" binding:"required"`
+	Force     bool        `json:"force"`
+}
+
+// MarketplaceSearchParams 市场搜索参数
+type MarketplaceSearchParams struct {
+	Query      string     `form:"q"`
+	CategoryID *uuid.UUID `form:"category_id"`
+	Featured   *bool      `form:"featured"`
+	Free       *bool      `form:"free"`
+	MinPrice   *float64   `form:"min_price"`
+	MaxPrice   *float64   `form:"max_price"`
+	MinRating  *float64   `form:"min_rating"`
+	SortBy     string     `form:"sort_by"`    // name, rating, downloads, created_at
+	SortOrder  string     `form:"sort_order"` // asc, desc
+	Page       int        `form:"page"`
+	Limit      int        `form:"page_size"`
+}

@@ -92,3 +92,12 @@ func CreatedResponse(c *gin.Context, data interface{}) {
 		Timestamp: time.Now(),
 	})
 }
+
+// NotImplementedResponse 501未实现响应
+func NotImplementedResponse(c *gin.Context) {
+	c.JSON(http.StatusNotImplemented, models.APIResponse{
+		Code:      http.StatusNotImplemented,
+		Message:   "Not implemented",
+		Timestamp: time.Now(),
+	})
+}

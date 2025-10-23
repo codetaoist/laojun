@@ -6,18 +6,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codetaoist/laojun/pkg/shared/database"
+	shareddb "github.com/codetaoist/laojun/pkg/shared/database"
 	"github.com/codetaoist/laojun/pkg/shared/models"
 	"github.com/google/uuid"
 )
 
 // CommunityService 社区服务
 type CommunityService struct {
-	db *database.DB
+	db *shareddb.DB
 }
 
 // NewCommunityService 创建社区服务
-func NewCommunityService(db *database.DB) *CommunityService {
+func NewCommunityService(db *shareddb.DB) *CommunityService {
 	return &CommunityService{db: db}
 }
 

@@ -4,7 +4,6 @@ import (
 	"database/sql"
 
 	sharedconfig "github.com/codetaoist/laojun/pkg/shared/config"
-	"github.com/codetaoist/laojun/internal/database"
 	"github.com/codetaoist/laojun/internal/handlers"
 	"github.com/codetaoist/laojun/internal/middleware"
 	"github.com/codetaoist/laojun/internal/services"
@@ -15,7 +14,7 @@ import (
 )
 
 func SetupRoutes(
-	authService *services.AuthService,
+	adminAuthService *services.AdminAuthService,
 	userService *services.UserService,
 	permissionService *services.PermissionService,
 	pluginService *services.PluginService,
@@ -27,7 +26,7 @@ func SetupRoutes(
 
 	// 创建处理程序
 	jwtManager := sharedauth.NewJWTManager(&cfg.JWT)
-	authHandler := handlers.NewAuthHandler(authService, jwtManager, cfg)
+	authHandler := handlers.NewAuthHandler(adminAuthService, jwtManager, cfg)
 	userHandler := handlers.NewUserHandler(userService)
 	permissionHandler := handlers.NewPermissionHandler(permissionService)
 	pluginHandler := handlers.NewPluginHandler(pluginService)
@@ -35,6 +34,9 @@ func SetupRoutes(
 	sharedDB, _ := shareddb.NewDB(&cfg.Database)
 	categoryService := services.NewCategoryService(sharedDB)
 	reviewService := services.NewReviewService(sharedDB)
+	// 创建插件审核服务和处理器（使用共享数据库包装器）
+	pluginReviewService := services.NewPluginReviewService(sharedDB)
+	pluginReviewHandler := handlers.NewPluginReviewHandler(pluginReviewService)
 	categoryHandler := handlers.NewCategoryHandler(categoryService)
 	reviewHandler := handlers.NewReviewHandler(reviewService)
 	rateLimitHandler := handlers.NewRateLimitHandler(redisClient)
@@ -51,15 +53,20 @@ func SetupRoutes(
 	iconHandler := handlers.NewIconHandler(iconService)
 
 	// 创建索引管理器和处理程序
-	indexManager := database.NewIndexManager(db)
-	indexHandler := handlers.NewIndexHandler(indexManager)
+	// TODO: 修复 IndexHandler 的方法签名问题
+	// indexManager := database.NewIndexManager(db)
+	// indexHandler := handlers.NewIndexHandler(indexManager)
 
 	// 新增系统服务与处理器
 	systemService := services.NewSystemService(db)
 	systemHandler := handlers.NewSystemHandler(systemService)
 
+	// 创建管理员插件管理服务和处理器
+	adminPluginService := services.NewAdminPluginService(sharedDB, nil) // 暂时不使用marketplace客户端
+	adminPluginHandler := handlers.NewAdminPluginHandler(adminPluginService)
+
 	// 创建中间件
-	authMiddleware := middleware.NewAuthMiddleware(authService)
+	authMiddleware := middleware.NewAdminAuthMiddleware(adminAuthService)
 	corsMiddleware := middleware.NewCORSMiddleware([]string{"*"}, true)
 	permissionMiddleware := middleware.NewPermissionMiddleware(permissionService)
 
@@ -78,15 +85,6 @@ func SetupRoutes(
 	// 公开路由
 	public := api.Group("/")
 	{
-		// 登录端点使用特殊的频率限制（如果启用）
-		if cfg.RateLimit.Enabled && redisClient != nil {
-			public.POST("/login",
-				middleware.LoginRateLimit(redisClient),
-				authHandler.Login)
-		} else {
-			public.POST("/login", authHandler.Login)
-		}
-
 		// 验证码端点按开关启用
 		if cfg.Security.EnableCaptcha {
 			public.GET("/auth/captcha", authHandler.GetCaptcha)
@@ -102,6 +100,8 @@ func SetupRoutes(
 
 		// 系统信息 - 公开访问
 		public.GET("/system/info", systemHandler.GetSystemInfo)
+
+
 	}
 
 	// 需要认证的路由
@@ -120,6 +120,28 @@ func SetupRoutes(
 		{
 			auth.POST("/logout", authHandler.Logout)
 			auth.GET("/profile", authHandler.GetProfile)
+		}
+
+		// 公开的认证路由（不需要认证）
+		publicAuth := api.Group("/auth")
+		{
+			// 登录端点使用特殊的频率限制（如果启用）
+			if cfg.RateLimit.Enabled && redisClient != nil {
+				publicAuth.POST("/login",
+					middleware.LoginRateLimit(redisClient),
+					authHandler.Login)
+			} else {
+				publicAuth.POST("/login", authHandler.Login)
+			}
+		}
+
+		// 兼容性路由：为总后台前端提供 /api/v1/login 路径
+		if cfg.RateLimit.Enabled && redisClient != nil {
+			api.POST("/login",
+				middleware.LoginRateLimit(redisClient),
+				authHandler.Login)
+		} else {
+			api.POST("/login", authHandler.Login)
 		}
 
 		// 用户信息路由别名（兼容前端调用）
@@ -471,6 +493,8 @@ func SetupRoutes(
 		}
 
 		// 索引管理 - 需要系统管理权（manage, view）
+		// TODO: 修复 IndexHandler 后重新启用
+		/*
 		indexes := protected.Group("/indexes")
 		if groupUserRateLimiter != nil {
 			indexes.Use(groupUserRateLimiter)
@@ -501,6 +525,7 @@ func SetupRoutes(
 				permissionMiddleware.RequireExtendedPermission("system", "database", "view"),
 				indexHandler.GetIndexRecommendations)
 		}
+		*/
 
 		// 多端权限示例 - 移动端专用API
 		mobile := protected.Group("/mobile")
@@ -522,6 +547,67 @@ func SetupRoutes(
 			iot.POST("/status", func(c *gin.Context) {
 				c.JSON(200, gin.H{"message": "设备状态上报成功"})
 			})
+		}
+
+
+
+		// 插件审核管理 - 需要插件审核权限
+		pluginReview := protected.Group("/plugin-review")
+		pluginReview.Use(permissionMiddleware.RequireExtendedPermission("marketplace", "plugin_review", "list"))
+		if groupUserRateLimiter != nil {
+			pluginReview.Use(groupUserRateLimiter)
+		}
+		{
+			// 审核队列管理
+			pluginReview.GET("/queue", pluginReviewHandler.GetReviewQueue)
+			pluginReview.POST("/assign/:plugin_id",
+				permissionMiddleware.RequireExtendedPermission("marketplace", "plugin_review", "assign"),
+				pluginReviewHandler.AssignReviewer)
+			
+			// 插件审核操作
+			pluginReview.POST("/review/:plugin_id",
+				permissionMiddleware.RequireExtendedPermission("marketplace", "plugin_review", "review"),
+				pluginReviewHandler.ReviewPlugin)
+			pluginReview.POST("/batch-review",
+				permissionMiddleware.RequireExtendedPermission("marketplace", "plugin_review", "review"),
+				pluginReviewHandler.BatchReviewPlugins)
+			
+			// 审核历史
+			pluginReview.GET("/history/:plugin_id",
+				permissionMiddleware.RequireExtendedPermission("marketplace", "plugin_review", "view"),
+				pluginReviewHandler.GetPluginReviewHistory)
+			
+			// 申诉管理
+			pluginReview.GET("/appeals",
+				permissionMiddleware.RequireExtendedPermission("marketplace", "plugin_appeal", "view"),
+				pluginReviewHandler.GetAppeals)
+			pluginReview.POST("/appeals/create/:plugin_id",
+				permissionMiddleware.RequireExtendedPermission("marketplace", "plugin_appeal", "create"),
+				pluginReviewHandler.CreateAppeal)
+			pluginReview.POST("/appeals/:appeal_id/process",
+				permissionMiddleware.RequireExtendedPermission("marketplace", "plugin_appeal", "process"),
+				pluginReviewHandler.ProcessAppeal)
+			pluginReview.GET("/appeals/:appeal_id",
+				permissionMiddleware.RequireExtendedPermission("marketplace", "plugin_appeal", "view"),
+				pluginReviewHandler.GetAppeal)
+			
+			// 审核统计
+			pluginReview.GET("/stats",
+				permissionMiddleware.RequireExtendedPermission("marketplace", "plugin_review", "view"),
+				pluginReviewHandler.GetReviewStats)
+			
+			// 自动审核
+			pluginReview.POST("/auto-review/:plugin_id",
+				permissionMiddleware.RequireExtendedPermission("marketplace", "plugin_review", "auto_review"),
+				pluginReviewHandler.AutoReviewPlugin)
+			
+			// 审核员工作负载
+			pluginReview.GET("/workload",
+				permissionMiddleware.RequireExtendedPermission("marketplace", "plugin_review", "view"),
+				pluginReviewHandler.GetReviewerWorkload)
+			
+			// 我的审核任务
+			pluginReview.GET("/my-tasks", pluginReviewHandler.GetMyReviewTasks)
 		}
 	}
 
@@ -570,6 +656,12 @@ func SetupRoutes(
 	{
 		categories.GET("/", categoryHandler.GetCategories)
 	}
+
+	// 设置管理员插件管理路由
+	SetupAdminPluginRoutes(r, adminPluginHandler, adminAuthService)
+	
+	// 设置管理员插件管理Web路由
+	SetupAdminPluginWebRoutes(r, adminPluginHandler, adminAuthService)
 
 	return r
 }

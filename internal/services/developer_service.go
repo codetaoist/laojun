@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/codetaoist/laojun/pkg/shared/database"
+	shareddb "github.com/codetaoist/laojun/pkg/shared/database"
 	"github.com/codetaoist/laojun/pkg/shared/models"
 	"github.com/google/uuid"
 )
 
 // DeveloperService 开发者服务
 type DeveloperService struct {
-	db *database.DB
+	db *shareddb.DB
 }
 
 // NewDeveloperService 创建开发者服务
-func NewDeveloperService(db *database.DB) *DeveloperService {
+func NewDeveloperService(db *shareddb.DB) *DeveloperService {
 	return &DeveloperService{db: db}
 }
 

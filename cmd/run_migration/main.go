@@ -13,19 +13,19 @@ func main() {
 	// 数据库连接字符串
 	dbURL := "postgres://laojun:change-me@localhost:5432/laojun?sslmode=disable"
 
-	// 连接数据库
+	// 连接数据�?
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		log.Fatal("连接数据库失败:", err)
+		log.Fatal("连接数据库失�?", err)
 	}
 	defer db.Close()
 
 	// 测试连接
 	if err := db.Ping(); err != nil {
-		log.Fatal("数据库连接测试失败:", err)
+		log.Fatal("数据库连接测试失�?", err)
 	}
 
-	fmt.Println("数据库连接成功")
+	fmt.Println("数据库连接成�?)
 
 	// 读取SQL文件
 	sqlContent, err := ioutil.ReadFile("migration.sql")
@@ -43,7 +43,7 @@ func main() {
 
 	// 验证数据
 	var count int
-	err = db.QueryRow("SELECT COUNT(*) FROM lj_users WHERE username = 'admin'").Scan(&count)
+	err = db.QueryRow("SELECT COUNT(*) FROM ua_admin WHERE username = 'admin'").Scan(&count)
 	if err != nil {
 		log.Fatal("查询admin用户失败:", err)
 	}
@@ -55,21 +55,21 @@ func main() {
 	}
 
 	// 检查角色数
-	err = db.QueryRow("SELECT COUNT(*) FROM lj_roles").Scan(&count)
+	err = db.QueryRow("SELECT COUNT(*) FROM az_roles").Scan(&count)
 	if err != nil {
 		log.Fatal("查询角色数量失败:", err)
 	}
 	fmt.Printf("创建 %d 个角色\n", count)
 
 	// 检查权限数
-	err = db.QueryRow("SELECT COUNT(*) FROM lj_permissions").Scan(&count)
+	err = db.QueryRow("SELECT COUNT(*) FROM az_permissions").Scan(&count)
 	if err != nil {
 		log.Fatal("查询权限数量失败:", err)
 	}
 	fmt.Printf("创建 %d 个权限\n", count)
 
 	// 检查扩展权限数
-	err = db.QueryRow("SELECT COUNT(*) FROM lj_extended_permissions").Scan(&count)
+	err = db.QueryRow("SELECT COUNT(*) FROM pe_extended_permissions").Scan(&count)
 	if err != nil {
 		log.Fatal("查询扩展权限数量失败:", err)
 	}

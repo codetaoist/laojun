@@ -9,6 +9,7 @@ import {
   MenuOutlined,
   AppstoreOutlined,
   SettingOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 import { useAppStore } from '@/stores/app';
 
@@ -66,6 +67,12 @@ const menuItems: MenuItem[] = [
     icon: <AppstoreOutlined />,
     label: '插件管理',
     path: '/plugins',
+  },
+  {
+    key: 'plugin-review',
+    icon: <AuditOutlined />,
+    label: '插件审核',
+    path: '/plugin-review',
   },
   {
     key: 'settings',

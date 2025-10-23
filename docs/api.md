@@ -1,15 +1,31 @@
-# API 文档
+# API 概述
 
-## 概述
+本文档提供太上老君系统 API 的总体概述和使用指南。
 
-Laojun API 是一个 RESTful API，提供完整的微服务功能。所有 API 响应都使用 JSON 格式。
+## API 架构
 
-## 基础信息
+太上老君系统采用 RESTful API 设计，提供统一的接口规范和响应格式。
 
-- **Base URL**: `http://localhost:8080/api/v1`
+### 基础信息
+
+- **Base URL**: `https://api.laojun.dev/v1`
+- **协议**: HTTPS
+- **数据格式**: JSON
 - **认证方式**: JWT Bearer Token
-- **内容类型**: `application/json`
-- **字符编码**: UTF-8
+- **API 版本**: v1.2.0
+
+### 认证机制
+
+所有 API 请求都需要通过 JWT Token 进行认证：
+
+```http
+Authorization: Bearer <your_jwt_token>
+```
+
+获取 Token 的方式：
+1. 用户登录接口获取访问令牌
+2. 使用刷新令牌延长会话
+3. 管理员可以生成 API Key
 
 ## 认证
 
@@ -563,4 +579,27 @@ API 使用语义化版本控制：
 
 ---
 
-更多详细信息请参考 [Swagger 文档](http://localhost:8080/swagger/)。
+## 开发工具
+
+### Swagger 文档生成
+
+太上老君系统提供了强大的 Swagger 文档生成工具，位于 `tools/swagger/` 目录。
+
+**快速使用**:
+```bash
+# 生成 API 文档
+cd tools/swagger
+./laojun-swagger generate
+
+# 启动文档服务器
+./laojun-swagger serve
+```
+
+**详细配置**: 参考 [Swagger 配置指南](api/swagger/README.md)
+
+### 在线文档
+
+- **开发环境**: http://localhost:8080/swagger-ui
+- **API 规范**: http://localhost:8080/swagger.json
+
+更多详细信息请参考 [Swagger 配置文档](api/swagger/README.md)。

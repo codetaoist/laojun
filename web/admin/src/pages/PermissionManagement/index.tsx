@@ -114,14 +114,21 @@ const PermissionManagement: React.FC = () => {
       };
       
       const response = await permissionService.getPermissions(params);
-      setPermissions(response.data);
+      // 确保 response.data 是数组
+      setPermissions(Array.isArray(response.data) ? response.data : []);
       setPagination(prev => ({
         ...prev,
-        total: response.total
+        total: response.total || 0
       }));
     } catch (error) {
       message.error('加载权限列表失败');
       console.error('Load permissions error:', error);
+      // 设置空数组作为默认值
+      setPermissions([]);
+      setPagination(prev => ({
+        ...prev,
+        total: 0
+      }));
     } finally {
       setLoading(false);
     }
@@ -136,6 +143,16 @@ const PermissionManagement: React.FC = () => {
     } catch (error) {
       message.error('加载统计信息失败');
       console.error('Load stats error:', error);
+      // 设置默认统计信息
+      setStats({
+        totalPermissions: 0,
+        systemPermissions: 0,
+        customPermissions: 0,
+        byResource: {},
+        byAction: {},
+        recentlyCreated: [],
+        mostUsed: []
+      });
     } finally {
       setStatsLoading(false);
     }
@@ -167,6 +184,8 @@ const PermissionManagement: React.FC = () => {
     } catch (error) {
       message.error('加载权限模板失败');
       console.error('Load templates error:', error);
+      // 设置空数组作为默认值
+      setTemplates([]);
     }
   };
 
@@ -177,11 +196,15 @@ const PermissionManagement: React.FC = () => {
         permissionService.getResources(),
         permissionService.getActions()
       ]);
-      setResources(resourcesData);
-      setActions(actionsData);
+      // 确保返回的数据是数组
+      setResources(Array.isArray(resourcesData) ? resourcesData : []);
+      setActions(Array.isArray(actionsData) ? actionsData : []);
     } catch (error) {
       message.error('加载选项失败');
       console.error('Load options error:', error);
+      // 设置空数组作为默认值
+      setResources([]);
+      setActions([]);
     }
   };
 
@@ -506,7 +529,7 @@ const PermissionManagement: React.FC = () => {
                   value={resourceFilter}
                   onChange={setResourceFilter}
                 >
-                  {resources.map(resource => (
+                  {(resources || []).map(resource => (
                     <Option key={resource} value={resource}>{resource}</Option>
                   ))}
                 </Select>
@@ -517,7 +540,7 @@ const PermissionManagement: React.FC = () => {
                   value={actionFilter}
                   onChange={setActionFilter}
                 >
-                  {actions.map(action => (
+                  {(actions || []).map(action => (
                     <Option key={action} value={action}>{action}</Option>
                   ))}
                 </Select>
@@ -636,7 +659,7 @@ const PermissionManagement: React.FC = () => {
                   allowClear
                   mode="combobox"
                 >
-                  {resources.map(resource => (
+                  {(resources || []).map(resource => (
                     <Option key={resource} value={resource}>{resource}</Option>
                   ))}
                 </Select>
@@ -654,7 +677,7 @@ const PermissionManagement: React.FC = () => {
                   allowClear
                   mode="combobox"
                 >
-                  {actions.map(action => (
+                  {(actions || []).map(action => (
                     <Option key={action} value={action}>{action}</Option>
                   ))}
                 </Select>
@@ -741,7 +764,7 @@ const PermissionManagement: React.FC = () => {
               </Button>
             </div>
             <Table
-              dataSource={templates}
+              dataSource={templates || []}
               rowKey="id"
               pagination={false}
               size="small"
@@ -837,7 +860,7 @@ const PermissionManagement: React.FC = () => {
                     (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
                   }
                 >
-                  {permissions.map(permission => (
+                  {(permissions || []).map(permission => (
                     <Option key={permission.id} value={permission.id}>
                       {permission.name} ({permission.resource}:{permission.action})
                     </Option>

@@ -66,7 +66,7 @@ func (s *IconService) GetIcons(params models.IconSearchParams) (*models.Paginate
 	}
 
 	// 查询总数
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM lj_icon_library %s", whereClause)
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM sys_icons %s", whereClause)
 	var total int
 	err := s.db.QueryRow(countQuery, args...).Scan(&total)
 	if err != nil {
@@ -77,7 +77,7 @@ func (s *IconService) GetIcons(params models.IconSearchParams) (*models.Paginate
 	offset := (params.Page - 1) * params.Limit
 	dataQuery := fmt.Sprintf(`
 		SELECT id, name, icon_type, icon_data, category, tags, is_active, created_at, updated_at
-		FROM lj_icon_library %s
+		FROM sys_icons %s
 		ORDER BY created_at DESC
 		LIMIT $%d OFFSET $%d
 	`, whereClause, argIndex, argIndex+1)
@@ -127,7 +127,7 @@ func (s *IconService) GetIcons(params models.IconSearchParams) (*models.Paginate
 func (s *IconService) GetIconByID(id uuid.UUID) (*models.Icon, error) {
 	query := `
 		SELECT id, name, icon_type, icon_data, category, tags, is_active, created_at, updated_at
-		FROM lj_icon_library
+		FROM sys_icons
 		WHERE id = $1
 	`
 
@@ -160,7 +160,7 @@ func (s *IconService) CreateIcon(req models.CreateIconRequest) (*models.Icon, er
 	now := time.Now()
 
 	query := `
-		INSERT INTO lj_icon_library (id, name, icon_type, icon_data, category, tags, is_active, created_at, updated_at)
+		INSERT INTO sys_icons (id, name, icon_type, icon_data, category, tags, is_active, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, name, icon_type, icon_data, category, tags, is_active, created_at, updated_at
 	`
@@ -250,7 +250,7 @@ func (s *IconService) UpdateIcon(id uuid.UUID, req models.UpdateIconRequest) (*m
 	args = append(args, id)
 
 	query := fmt.Sprintf(`
-		UPDATE lj_icon_library
+		UPDATE sys_icons
 		SET %s
 		WHERE id = $%d
 		RETURNING id, name, icon_type, icon_data, category, tags, is_active, created_at, updated_at
@@ -281,7 +281,7 @@ func (s *IconService) UpdateIcon(id uuid.UUID, req models.UpdateIconRequest) (*m
 
 // DeleteIcon 删除图标
 func (s *IconService) DeleteIcon(id uuid.UUID) error {
-	query := "DELETE FROM lj_icon_library WHERE id = $1"
+	query := "DELETE FROM sys_icons WHERE id = $1"
 	result, err := s.db.Exec(query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete icon: %w", err)
@@ -311,7 +311,7 @@ func (s *IconService) GetIconStats() (*models.IconStats, error) {
 			COUNT(*) as total,
 			COUNT(CASE WHEN is_active = true THEN 1 END) as active,
 			COUNT(CASE WHEN is_active = false THEN 1 END) as inactive
-		FROM lj_icon_library
+		FROM sys_icons
 	`
 	err := s.db.QueryRow(query).Scan(&stats.TotalIcons, &stats.ActiveIcons, &stats.InactiveIcons)
 	if err != nil {
@@ -321,7 +321,7 @@ func (s *IconService) GetIconStats() (*models.IconStats, error) {
 	// 获取分类统计
 	categoryQuery := `
 		SELECT category, COUNT(*) as count
-		FROM lj_icon_library
+		FROM sys_icons
 		WHERE is_active = true AND category IS NOT NULL AND category != ''
 		GROUP BY category
 		ORDER BY count DESC
@@ -344,7 +344,7 @@ func (s *IconService) GetIconStats() (*models.IconStats, error) {
 	// 获取图标类型统计
 	typeQuery := `
 		SELECT icon_type, COUNT(*) as count
-		FROM lj_icon_library
+		FROM sys_icons
 		WHERE is_active = true
 		GROUP BY icon_type
 	`
@@ -371,7 +371,7 @@ func (s *IconService) GetIconStats() (*models.IconStats, error) {
 func (s *IconService) GetCategories() ([]string, error) {
 	query := `
 		SELECT DISTINCT category
-		FROM lj_icon_library
+		FROM sys_icons
 		WHERE is_active = true AND category IS NOT NULL AND category != ''
 		ORDER BY category
 	`

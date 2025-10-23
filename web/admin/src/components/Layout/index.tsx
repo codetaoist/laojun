@@ -60,6 +60,10 @@ const Layout: React.FC = () => {
         title: '插件管理',
         breadcrumbs: [{ title: '首页', path: '/' }, { title: '插件管理' }]
       },
+      '/plugin-review': {
+        title: '插件审核',
+        breadcrumbs: [{ title: '首页', path: '/' }, { title: '插件审核' }]
+      },
       '/settings': {
         title: '系统设置',
         breadcrumbs: [{ title: '首页', path: '/' }, { title: '系统设置' }]

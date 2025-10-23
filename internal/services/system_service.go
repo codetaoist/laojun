@@ -24,7 +24,7 @@ func NewSystemService(db *sql.DB) *SystemService {
 
 // GetSettings 获取系统设置
 func (s *SystemService) GetSettings(ctx context.Context) ([]models.SystemSetting, error) {
-	query := `SELECT id, key, value, type, category, description, is_public, is_sensitive, created_at, updated_at FROM lj_system_settings ORDER BY category, key`
+	query := `SELECT id, key, value, data_type, description, is_public, created_at, updated_at FROM sys_settings ORDER BY key`
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("查询系统设置失败: %w", err)
@@ -34,7 +34,7 @@ func (s *SystemService) GetSettings(ctx context.Context) ([]models.SystemSetting
 	var settings []models.SystemSetting
 	for rows.Next() {
 		var m models.SystemSetting
-		if err := rows.Scan(&m.ID, &m.Key, &m.Value, &m.Type, &m.Category, &m.Description, &m.IsPublic, &m.IsSensitive, &m.CreatedAt, &m.UpdatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.Key, &m.Value, &m.Type, &m.Description, &m.IsPublic, &m.CreatedAt, &m.UpdatedAt); err != nil {
 			return nil, err
 		}
 		settings = append(settings, m)
@@ -55,15 +55,13 @@ func (s *SystemService) SaveSettings(ctx context.Context, settings []models.Syst
 	}
 
 	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO lj_system_settings (key, value, type, category, description, is_public, is_sensitive, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+		INSERT INTO sys_settings (key, value, data_type, description, is_public, updated_at)
+		VALUES ($1, $2, $3, $4, $5, NOW())
 		ON CONFLICT (key) DO UPDATE SET 
 			value = EXCLUDED.value,
-			type = EXCLUDED.type,
-			category = EXCLUDED.category,
+			data_type = EXCLUDED.data_type,
 			description = EXCLUDED.description,
 			is_public = EXCLUDED.is_public,
-			is_sensitive = EXCLUDED.is_sensitive,
 			updated_at = NOW();
 	`)
 	if err != nil {
@@ -73,7 +71,7 @@ func (s *SystemService) SaveSettings(ctx context.Context, settings []models.Syst
 	defer stmt.Close()
 
 	for _, m := range settings {
-		if _, err := stmt.ExecContext(ctx, m.Key, m.Value, m.Type, m.Category, m.Description, m.IsPublic, m.IsSensitive); err != nil {
+		if _, err := stmt.ExecContext(ctx, m.Key, m.Value, m.Type, m.Description, m.IsPublic); err != nil {
 			tx.Rollback()
 			return err
 		}
@@ -83,8 +81,8 @@ func (s *SystemService) SaveSettings(ctx context.Context, settings []models.Syst
 
 // GetAuditLogs 获取审计日志
 func (s *SystemService) GetAuditLogs(ctx context.Context, page, pageSize int, level, module, startDate, endDate string) ([]models.AuditLog, int64, error) {
-	base := `SELECT id, user_id, target_id, target_type, action, level, description, old_data, new_data, ip_address, user_agent, created_at FROM lj_audit_logs WHERE 1=1`
-	countBase := `SELECT COUNT(*) FROM lj_audit_logs WHERE 1=1`
+	base := `SELECT id, user_id, target_id, target_type, action, level, description, old_data, new_data, ip_address, user_agent, created_at FROM sys_audit_logs WHERE 1=1`
+	countBase := `SELECT COUNT(*) FROM sys_audit_logs WHERE 1=1`
 	args := []interface{}{}
 	where := ""
 
@@ -138,7 +136,7 @@ func (s *SystemService) GetAuditLogs(ctx context.Context, page, pageSize int, le
 
 // ClearAuditLogs 清理审计日志（按过滤条件）
 func (s *SystemService) ClearAuditLogs(ctx context.Context, level, module, before string) (int64, error) {
-	base := `DELETE FROM lj_audit_logs WHERE 1=1`
+	base := `DELETE FROM sys_audit_logs WHERE 1=1`
 	args := []interface{}{}
 	where := ""
 	idx := 1

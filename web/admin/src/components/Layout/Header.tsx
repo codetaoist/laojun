@@ -38,9 +38,9 @@ const Header: React.FC = () => {
       setRemaining(t('auth.remaining', { mins, secs }));
     };
     update();
-    const t = setInterval(update, 1000);
-    return () => clearInterval(t);
-  }, [expiresAt]);
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, [expiresAt, t]);
 
   // 处理登出
   const handleLogout = async () => {

@@ -59,7 +59,7 @@ func (s *JWTKeyService) CreateNewKey(expiresIn time.Duration) (*JWTKey, string, 
 	expiresAt := now.Add(expiresIn)
 
 	query := `
-		INSERT INTO lj_jwt_keys (id, key_hash, is_active, created_at, expires_at)
+		INSERT INTO ua_jwt_keys (id, key_hash, is_active, created_at, expires_at)
 		VALUES ($1, $2, $3, $4, $5)
 	`
 
@@ -83,7 +83,7 @@ func (s *JWTKeyService) CreateNewKey(expiresIn time.Duration) (*JWTKey, string, 
 func (s *JWTKeyService) GetActiveKey() (*JWTKey, error) {
 	query := `
 		SELECT id, key_hash, is_active, created_at, expires_at
-		FROM lj_jwt_keys
+		FROM ua_jwt_keys
 		WHERE is_active = true AND expires_at > NOW()
 		ORDER BY created_at DESC
 		LIMIT 1
@@ -111,7 +111,7 @@ func (s *JWTKeyService) ValidateKeyHash(keyString string) (bool, error) {
 
 	query := `
 		SELECT EXISTS(
-			SELECT 1 FROM lj_jwt_keys 
+			SELECT 1 FROM ua_jwt_keys 
 			WHERE key_hash = $1 AND is_active = true AND expires_at > NOW()
 		)
 	`
@@ -135,7 +135,7 @@ func (s *JWTKeyService) RotateKey(newKeyExpiresIn time.Duration) (*JWTKey, strin
 
 	// 将旧密钥标记为非活跃（但不删除，以便验证现有token）
 	updateQuery := `
-		UPDATE lj_jwt_keys 
+		UPDATE ua_jwt_keys 
 		SET is_active = false 
 		WHERE is_active = true AND id != $1
 	`
@@ -152,7 +152,7 @@ func (s *JWTKeyService) RotateKey(newKeyExpiresIn time.Duration) (*JWTKey, strin
 func (s *JWTKeyService) CleanExpiredKeys() error {
 	// 只删除过期超过7天的密钥，保留一段时间以便验证旧token
 	query := `
-		DELETE FROM lj_jwt_keys 
+		DELETE FROM ua_jwt_keys 
 		WHERE expires_at < NOW() - INTERVAL '7 days'
 	`
 
@@ -176,7 +176,7 @@ func (s *JWTKeyService) GetKeyStatistics() (map[string]int, error) {
 			COUNT(*) as total,
 			COUNT(CASE WHEN is_active = true THEN 1 END) as active,
 			COUNT(CASE WHEN expires_at < NOW() THEN 1 END) as expired
-		FROM lj_jwt_keys
+		FROM ua_jwt_keys
 	`
 
 	var total, active, expired int

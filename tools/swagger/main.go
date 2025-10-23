@@ -8,6 +8,7 @@ import (
 	"go/token"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -339,69 +340,101 @@ func generateCmd() *cobra.Command {
 		Short: "Generate Swagger documentation",
 		Long:  "Generate Swagger/OpenAPI documentation from Go source code",
 		Run: func(cmd *cobra.Command, args []string) {
-			generateSwagger(configFile, output, format)
+			if err := generateSwagger(configFile, output, format); err != nil {
+				log.Fatalf("Error generating swagger: %v", err)
+			}
 		},
 	}
 
-	cmd.Flags().StringVarP(&configFile, "config", "c", "swagger.yaml", "Configuration file")
-	cmd.Flags().StringVarP(&output, "output", "o", "", "Output file (default: swagger.json/yaml)")
+	cmd.Flags().StringVarP(&configFile, "config", "c", "swagger.yaml", "Configuration file path")
+	cmd.Flags().StringVarP(&output, "output", "o", "./docs/swagger.json", "Output file path")
 	cmd.Flags().StringVarP(&format, "format", "f", "json", "Output format (json, yaml, html)")
 
 	return cmd
 }
 
-func generateSwagger(configFile, output, format string) {
-	fmt.Println("🔨 Generating Swagger documentation...")
+func generateSwagger(configFile, output, format string) error {
+	fmt.Printf("🔧 Loading configuration from: %s\n", configFile)
 
-	// Load configuration
 	if err := loadConfig(configFile); err != nil {
-		log.Fatalf("Error loading config: %v", err)
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Initialize swagger object
+	fmt.Printf("📂 Scanning source directory: %s\n", config.SourceDir)
+
 	swagger = Swagger{
 		OpenAPI: "3.0.3",
 		Info:    config.Info,
 		Servers: config.Servers,
 		Paths:   make(map[string]PathItem),
 		Components: &Components{
-			Schemas:         make(map[string]*Schema),
-			SecuritySchemes: make(map[string]SecurityScheme),
+			Schemas: make(map[string]*Schema),
+			SecuritySchemes: map[string]SecurityScheme{
+				"bearerAuth": {
+					Type:         "http",
+					Scheme:       "bearer",
+					BearerFormat: "JWT",
+					Description:  "JWT Bearer token authentication",
+				},
+			},
 		},
 		Security: config.Security,
 	}
 
-	// Parse source files
-	if err := parseSourceFiles(); err != nil {
-		log.Fatalf("Error parsing source files: %v", err)
+	if err := scanSourceFiles(); err != nil {
+		return fmt.Errorf("failed to scan source files: %w", err)
 	}
 
-	// Generate output
-	if output == "" {
-		if format == "yaml" {
-			output = "swagger.yaml"
-		} else if format == "html" {
-			output = "swagger.html"
-		} else {
-			output = "swagger.json"
-		}
-	}
+	fmt.Printf("📝 Generating %s documentation...\n", format)
 
 	if err := generateOutput(output, format); err != nil {
-		log.Fatalf("Error generating output: %v", err)
+		return fmt.Errorf("failed to generate output: %w", err)
 	}
 
-	fmt.Printf("Swagger documentation generated: %s\n", output)
+	fmt.Printf("✅ Documentation generated successfully: %s\n", output)
+	return nil
 }
 
 func loadConfig(configFile string) error {
-	// Set default config
-	config = Config{
+	if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		fmt.Printf("⚠️  Configuration file not found, using defaults\n")
+		config = getDefaultConfig()
+		return nil
+	}
+
+	data, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		return fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	// Validate and set defaults
+	if config.SourceDir == "" {
+		config.SourceDir = "./"
+	}
+	if config.OutputDir == "" {
+		config.OutputDir = "./docs"
+	}
+	if config.OutputFormat == "" {
+		config.OutputFormat = "json"
+	}
+	if len(config.IncludeFiles) == 0 {
+		config.IncludeFiles = []string{"**/*.go"}
+	}
+
+	return nil
+}
+
+func getDefaultConfig() Config {
+	return Config{
 		SourceDir:    "./",
 		OutputDir:    "./docs",
 		OutputFormat: "json",
 		IncludeFiles: []string{"**/*.go"},
-		ExcludeFiles: []string{"*_test.go", "vendor/**"},
+		ExcludeFiles: []string{"*_test.go", "vendor/**", "node_modules/**"},
 		Info: SwaggerInfo{
 			Title:       "Laojun API",
 			Description: "Laojun Platform API Documentation",
@@ -421,24 +454,13 @@ func loadConfig(configFile string) error {
 				Description: "Development server",
 			},
 		},
+		Security: []SecurityRequirement{
+			{"bearerAuth": []string{}},
+		},
 	}
-
-	// Load from file if exists
-	if _, err := os.Stat(configFile); err == nil {
-		data, err := ioutil.ReadFile(configFile)
-		if err != nil {
-			return err
-		}
-
-		if err := yaml.Unmarshal(data, &config); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
-func parseSourceFiles() error {
+func scanSourceFiles() error {
 	fset := token.NewFileSet()
 
 	return filepath.Walk(config.SourceDir, func(path string, info os.FileInfo, err error) error {
@@ -791,8 +813,101 @@ func serveSwagger(port int, dir string) {
 	fmt.Printf("🚀 Starting Swagger documentation server on port %d...\n", port)
 	fmt.Printf("📖 Documentation available at: http://localhost:%d\n", port)
 
-	// TODO: Implement HTTP server to serve documentation
-	fmt.Println("Server implementation not yet complete")
+	// Serve static files
+	fs := http.FileServer(http.Dir(dir))
+	http.Handle("/", fs)
+
+	// Serve swagger.json if it exists
+	swaggerPath := filepath.Join(dir, "swagger.json")
+	if _, err := os.Stat(swaggerPath); err == nil {
+		http.HandleFunc("/swagger.json", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			http.ServeFile(w, r, swaggerPath)
+		})
+	}
+
+	// Serve swagger UI
+	http.HandleFunc("/swagger-ui", func(w http.ResponseWriter, r *http.Request) {
+		swaggerUIHTML := generateSwaggerUIHTML()
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(swaggerUIHTML))
+	})
+
+	// Health check endpoint
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{
+			"status": "healthy",
+			"service": "laojun-swagger",
+		})
+	})
+
+	fmt.Printf("🌐 Swagger UI available at: http://localhost:%d/swagger-ui\n", port)
+	fmt.Printf("🔍 Health check at: http://localhost:%d/health\n", port)
+
+	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+}
+
+func generateSwaggerUIHTML() string {
+	return `<!DOCTYPE html>
+<html>
+<head>
+    <title>Laojun API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui.css" />
+    <style>
+        html {
+            box-sizing: border-box;
+            overflow: -moz-scrollbars-vertical;
+            overflow-y: scroll;
+        }
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+        body {
+            margin:0;
+            background: #fafafa;
+        }
+        .swagger-ui .topbar {
+            background-color: #1f2937;
+        }
+        .swagger-ui .topbar .download-url-wrapper {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            const ui = SwaggerUIBundle({
+                url: './swagger.json',
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout",
+                tryItOutEnabled: true,
+                filter: true,
+                supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
+                onComplete: function() {
+                    console.log('Swagger UI loaded successfully');
+                },
+                onFailure: function(error) {
+                    console.error('Failed to load Swagger UI:', error);
+                }
+            });
+        };
+    </script>
+</body>
+</html>`
 }
 
 func validateCmd() *cobra.Command {
@@ -802,17 +917,23 @@ func validateCmd() *cobra.Command {
 		Long:  "Validate the generated Swagger/OpenAPI documentation",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			validateSwagger(args[0])
+			if err := validateSwagger(args[0]); err != nil {
+				log.Fatalf("Validation failed: %v", err)
+			}
 		},
 	}
 }
 
-func validateSwagger(file string) {
+func validateSwagger(file string) error {
 	fmt.Printf("🔍 Validating Swagger documentation: %s\n", file)
+
+	if _, err := os.Stat(file); os.IsNotExist(err) {
+		return fmt.Errorf("file does not exist: %s", file)
+	}
 
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
-		log.Fatalf("Error reading file: %v", err)
+		return fmt.Errorf("error reading file: %w", err)
 	}
 
 	var swagger Swagger
@@ -823,12 +944,28 @@ func validateSwagger(file string) {
 	}
 
 	if err != nil {
-		log.Fatalf("Error parsing file: %v", err)
+		return fmt.Errorf("error parsing file: %w", err)
 	}
 
-	// Basic validation
-	errors := []string{}
+	// Comprehensive validation
+	errors := validateSwaggerSpec(&swagger)
 
+	if len(errors) > 0 {
+		fmt.Println("❌ Validation failed:")
+		for _, err := range errors {
+			fmt.Printf("   - %s\n", err)
+		}
+		return fmt.Errorf("validation failed with %d errors", len(errors))
+	}
+
+	fmt.Println("✅ Swagger documentation is valid!")
+	return nil
+}
+
+func validateSwaggerSpec(swagger *Swagger) []string {
+	var errors []string
+
+	// Required fields validation
 	if swagger.OpenAPI == "" {
 		errors = append(errors, "OpenAPI version is required")
 	}
@@ -845,77 +982,90 @@ func validateSwagger(file string) {
 		errors = append(errors, "At least one path is required")
 	}
 
-	if len(errors) > 0 {
-		fmt.Println("Validation failed:")
-		for _, err := range errors {
-			fmt.Printf("   - %s\n", err)
+	// Validate paths
+	for path, pathItem := range swagger.Paths {
+		if !strings.HasPrefix(path, "/") {
+			errors = append(errors, fmt.Sprintf("Path '%s' must start with '/'", path))
 		}
-		os.Exit(1)
+
+		// Validate operations
+		operations := []*Operation{
+			pathItem.Get, pathItem.Post, pathItem.Put, pathItem.Delete,
+			pathItem.Patch, pathItem.Options, pathItem.Head, pathItem.Trace,
+		}
+
+		for _, op := range operations {
+			if op != nil {
+				if len(op.Responses) == 0 {
+					errors = append(errors, fmt.Sprintf("Operation in path '%s' must have at least one response", path))
+				}
+			}
+		}
 	}
 
-	fmt.Println("Swagger documentation is valid!")
+	// Validate servers
+	for i, server := range swagger.Servers {
+		if server.URL == "" {
+			errors = append(errors, fmt.Sprintf("Server[%d].url is required", i))
+		}
+	}
+
+	return errors
 }
 
 func initCmd() *cobra.Command {
-	return &cobra.Command{
+	var force bool
+
+	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Initialize Swagger configuration",
 		Long:  "Create a default swagger.yaml configuration file",
 		Run: func(cmd *cobra.Command, args []string) {
-			initSwagger()
+			if err := initSwagger(force); err != nil {
+				log.Fatalf("Error initializing swagger: %v", err)
+			}
 		},
 	}
+
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "Force overwrite existing configuration")
+
+	return cmd
 }
 
-func initSwagger() {
+func initSwagger(force bool) error {
+	configFile := "swagger.yaml"
+
+	if !force {
+		if _, err := os.Stat(configFile); err == nil {
+			return fmt.Errorf("configuration file already exists. Use --force to overwrite")
+		}
+	}
+
 	fmt.Println("🚀 Initializing Swagger configuration...")
 
-	config := Config{
-		SourceDir:    "./",
-		OutputDir:    "./docs",
-		OutputFormat: "json",
-		IncludeFiles: []string{"**/*.go"},
-		ExcludeFiles: []string{"*_test.go", "vendor/**"},
-		Info: SwaggerInfo{
-			Title:       "Laojun API",
-			Description: "Laojun Platform API Documentation",
-			Version:     "1.0.0",
-			Contact: &Contact{
-				Name:  "Laojun Team",
-				Email: "team@laojun.com",
-			},
-			License: &License{
-				Name: "MIT",
-				URL:  "https://opensource.org/licenses/MIT",
-			},
-		},
-		Servers: []Server{
-			{
-				URL:         "http://localhost:8080",
-				Description: "Development server",
-			},
-			{
-				URL:         "https://api.laojun.com",
-				Description: "Production server",
-			},
-		},
-		Security: []SecurityRequirement{
-			{"bearerAuth": []string{}},
-		},
-	}
+	config := getDefaultConfig()
 
 	data, err := yaml.Marshal(config)
 	if err != nil {
-		log.Fatalf("Error marshaling config: %v", err)
+		return fmt.Errorf("error marshaling config: %w", err)
 	}
 
-	if err := ioutil.WriteFile("swagger.yaml", data, 0644); err != nil {
-		log.Fatalf("Error writing config file: %v", err)
+	if err := ioutil.WriteFile(configFile, data, 0644); err != nil {
+		return fmt.Errorf("error writing config file: %w", err)
 	}
 
-	fmt.Println("Configuration file created: swagger.yaml")
+	fmt.Printf("✅ Configuration file created: %s\n", configFile)
 	fmt.Println("📝 Next steps:")
 	fmt.Println("   1. Edit swagger.yaml to customize your API documentation")
-	fmt.Println("   2. Add swagger annotations to your Go code")
+	fmt.Println("   2. Add swagger annotations to your Go code:")
+	fmt.Println("      // @Summary Get user by ID")
+	fmt.Println("      // @Description Get a user by their unique identifier")
+	fmt.Println("      // @Tags users")
+	fmt.Println("      // @Param id path int true \"User ID\"")
+	fmt.Println("      // @Success 200 {object} User")
+	fmt.Println("      // @Router /users/{id} [get]")
 	fmt.Println("   3. Run 'laojun-swagger generate' to generate documentation")
+	fmt.Println("   4. Run 'laojun-swagger serve' to start the documentation server")
+
+	return nil
 }

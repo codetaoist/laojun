@@ -99,7 +99,7 @@ func LoadConfig() (*Config, error) {
 			SSLMode:         getEnv("DB_SSLMODE", "disable"),
 			MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 25),
 			MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 25),
-			ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", 5*time.Minute),
+			ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", time.Hour),
 		},
 		Redis: RedisConfig{
 			Host:     getEnv("REDIS_HOST", "localhost"),

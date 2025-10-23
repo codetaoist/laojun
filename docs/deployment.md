@@ -1,60 +1,55 @@
 # 部署指南
 
-本文档详细介绍了 Laojun 项目的各种部署方式，包括本地开发、Docker 容器化部署和 Kubernetes 集群部署。
+本文档提供太上老君系统的部署总览，包括本地开发环境、Docker 容器化部署和 Kubernetes 集群部署的概述和快速入门。
 
-## 目录
+## 部署方式概览
 
-- [环境要求](#环境要求)
-- [本地部署](#本地部署)
-- [Docker 部署](#docker-部署)
-- [Kubernetes 部署](#kubernetes-部署)
-- [配置管理](#配置管理)
-- [监控和日志](#监控和日志)
-- [安全配置](#安全配置)
-- [故障排除](#故障排除)
+太上老君系统支持多种部署方式，以满足不同环境和需求：
+
+### 1. 本地开发环境
+适用于开发和测试阶段，直接在本地运行服务。
+
+### 2. Docker 部署
+适用于生产环境的容器化部署，提供一致的运行环境。
+- **详细指南**: [Docker 部署文档](deployment/docker.md)
+
+### 3. Kubernetes 部署
+适用于大规模生产环境，提供高可用和自动扩缩容。
+- **详细指南**: [Kubernetes 部署文档](deployment/kubernetes.md)
 
 ## 环境要求
 
 ### 基础要求
+- **Go**: 1.19+
+- **PostgreSQL**: 13+
+- **Redis**: 6+
+- **Node.js**: 16+ (前端开发)
 
-- **操作系统**: Linux, macOS, Windows
-- **Go 版本**: 1.21 或更高
-- **数据库**: PostgreSQL 13+ 或 MySQL 8.0+
-- **缓存**: Redis 6.0+
-- **内存**: 最小 2GB，推荐 4GB+
-- **存储**: 最小 10GB 可用空间
+### 系统要求
+- **操作系统**: Linux/macOS/Windows
+- **内存**: 最少 4GB
+- **存储**: 最少 10GB 可用空间
+- **网络**: 稳定的互联网连接
 
-### 可选组件
+## 快速开始 - 本地开发
 
-- **Docker**: 20.10+ (容器化部署)
-- **Kubernetes**: 1.20+ (集群部署)
-- **Nginx**: 1.18+ (反向代理)
-- **Prometheus**: 2.30+ (监控)
-- **Grafana**: 8.0+ (可视化)
-
-## 本地部署
-
-### 1. 准备环境
+### 1. 克隆项目
 
 ```bash
-# 安装 Go
-wget https://golang.org/dl/go1.21.0.linux-amd64.tar.gz
-sudo tar -C /usr/local -xzf go1.21.0.linux-amd64.tar.gz
-export PATH=$PATH:/usr/local/go/bin
-
-# 安装 PostgreSQL
-sudo apt-get update
-sudo apt-get install postgresql postgresql-contrib
-
-# 安装 Redis
-sudo apt-get install redis-server
+git clone https://github.com/your-org/taishanglaojun.git
+cd taishanglaojun
 ```
 
-### 2. 克隆项目
+### 2. 安装依赖
 
 ```bash
-git clone https://github.com/codetaoist/laojun.git
-cd laojun
+# 安装 Go 依赖
+go mod download
+
+# 安装前端依赖（如果有）
+cd frontend
+npm install
+cd ..
 ```
 
 ### 3. 配置数据库
@@ -142,7 +137,7 @@ go run cmd/api/main.go
 curl http://localhost:8080/health
 
 # API 文档
-open http://localhost:8080/swagger/
+open http://localhost:8080/swagger-ui
 ```
 
 ## Docker 部署

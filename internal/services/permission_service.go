@@ -29,7 +29,7 @@ func NewPermissionService(db *sql.DB) *PermissionService {
 func (s *PermissionService) GetDeviceTypes() ([]models.DeviceTypeModel, error) {
 	query := `
 		SELECT id, code, name, description, icon, sort_order, is_active, created_at, updated_at
-		FROM lj_device_types
+		FROM sm_device_types
 		WHERE is_active = true
 		ORDER BY sort_order ASC, id ASC
 	`
@@ -56,7 +56,7 @@ func (s *PermissionService) GetDeviceTypes() ([]models.DeviceTypeModel, error) {
 
 func (s *PermissionService) CreateDeviceType(req models.DeviceTypeRequest) (*models.DeviceTypeModel, error) {
 	query := `
-		INSERT INTO lj_device_types (code, name, description, icon, sort_order)
+		INSERT INTO sm_device_types (code, name, description, icon, sort_order)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id, code, name, description, icon, sort_order, is_active, created_at, updated_at
 	`
@@ -78,7 +78,7 @@ func (s *PermissionService) CreateDeviceType(req models.DeviceTypeRequest) (*mod
 func (s *PermissionService) GetModules() ([]models.Module, error) {
 	query := `
 		SELECT id, code, name, description, icon, sort_order, is_active, created_at, updated_at
-		FROM lj_modules
+		FROM sm_modules
 		WHERE is_active = true
 		ORDER BY sort_order ASC, id ASC
 	`
@@ -105,7 +105,7 @@ func (s *PermissionService) GetModules() ([]models.Module, error) {
 
 func (s *PermissionService) CreateModule(req models.ModuleRequest) (*models.Module, error) {
 	query := `
-		INSERT INTO lj_modules (code, name, description, icon, sort_order)
+		INSERT INTO sm_modules (code, name, description, icon, sort_order)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id, code, name, description, icon, sort_order, is_active, created_at, updated_at
 	`
@@ -127,7 +127,7 @@ func (s *PermissionService) CreateModule(req models.ModuleRequest) (*models.Modu
 func (s *PermissionService) GetUserGroups() ([]models.UserGroupWithMembers, error) {
 	query := `
 		SELECT ug.id, ug.name, ug.description, ug.is_active, ug.created_at, ug.updated_at
-		FROM lj_user_groups ug
+		FROM ug_user_groups ug
 		WHERE ug.is_active = true
 		ORDER BY ug.created_at DESC
 	`
@@ -163,8 +163,8 @@ func (s *PermissionService) GetUserGroups() ([]models.UserGroupWithMembers, erro
 func (s *PermissionService) getUserGroupMembers(userGroupID uuid.UUID) ([]models.User, error) {
 	query := `
 		SELECT u.id, u.username, u.email, u.is_active, u.created_at, u.updated_at
-		FROM lj_users u
-		INNER JOIN lj_user_group_members ugm ON u.id = ugm.user_id
+		FROM ua_admin u
+		INNER JOIN ug_user_group_members ugm ON u.id = ugm.user_id
 		WHERE ugm.user_group_id = $1 AND u.is_active = true
 		ORDER BY u.username ASC
 	`
@@ -191,7 +191,7 @@ func (s *PermissionService) getUserGroupMembers(userGroupID uuid.UUID) ([]models
 
 func (s *PermissionService) CreateUserGroup(req models.UserGroupRequest) (*models.UserGroup, error) {
 	query := `
-		INSERT INTO lj_user_groups (name, description)
+		INSERT INTO ug_user_groups (name, description)
 		VALUES ($1, $2)
 		RETURNING id, name, description, is_active, created_at, updated_at
 	`
@@ -216,7 +216,7 @@ func (s *PermissionService) AddUsersToGroup(req models.UserGroupMemberRequest) e
 	defer tx.Rollback()
 
 	// 先删除现有组成员
-	_, err = tx.Exec("DELETE FROM lj_user_group_members WHERE user_group_id = $1", req.UserGroupID)
+	_, err = tx.Exec("DELETE FROM ug_user_group_members WHERE user_group_id = $1", req.UserGroupID)
 	if err != nil {
 		return err
 	}
@@ -224,7 +224,7 @@ func (s *PermissionService) AddUsersToGroup(req models.UserGroupMemberRequest) e
 	// 添加新组成员
 	for _, userID := range req.UserIDs {
 		_, err = tx.Exec(`
-			INSERT INTO lj_user_group_members (user_group_id, user_id)
+			INSERT INTO ug_user_group_members (user_group_id, user_id)
 			VALUES ($1, $2)
 		`, req.UserGroupID, userID)
 		if err != nil {
@@ -242,9 +242,9 @@ func (s *PermissionService) GetExtendedPermissions(moduleID, deviceTypeID uuid.U
 		SELECT ep.id, ep.module_id, ep.device_type_id, ep.resource, ep.action, ep.description,
 			   ep.element_type, ep.element_code, ep.created_at,
 			   m.name as module_name, dt.name as device_type_name
-		FROM lj_extended_permissions ep
-		INNER JOIN lj_modules m ON ep.module_id = m.id
-		INNER JOIN lj_device_types dt ON ep.device_type_id = dt.id
+		FROM pe_extended_permissions ep
+		INNER JOIN sm_modules m ON ep.module_id = m.id
+		INNER JOIN sm_device_types dt ON ep.device_type_id = dt.id
 		WHERE 1=1
 	`
 
@@ -288,7 +288,7 @@ func (s *PermissionService) GetExtendedPermissions(moduleID, deviceTypeID uuid.U
 
 func (s *PermissionService) CreateExtendedPermission(req models.ExtendedPermissionRequest) (*models.ExtendedPermission, error) {
 	query := `
-		INSERT INTO lj_extended_permissions (module_id, device_type_id, resource, action, description)
+		INSERT INTO pe_extended_permissions (module_id, device_type_id, resource, action, description)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id, module_id, device_type_id, resource, action, description, element_type, element_code, created_at
 	`
@@ -403,21 +403,21 @@ func (s *PermissionService) performPermissionCheck(req models.UserPermissionChec
 func (s *PermissionService) checkDirectPermission(req models.UserPermissionCheckRequest) (bool, error) {
 	query := `
 		SELECT COUNT(*)
-		FROM lj_user_device_permissions udp
-		INNER JOIN lj_extended_permissions ep ON udp.permission_id = ep.id
-		INNER JOIN lj_modules m ON ep.module_id = m.id
-		INNER JOIN lj_device_types dt ON ep.device_type_id = dt.id
+		FROM pe_user_device_permissions udp
+		INNER JOIN sm_device_types dt ON udp.device_type_id = dt.id
 		WHERE udp.user_id = $1 
 		  AND dt.code = $2 
-		  AND m.code = $3 
-		  AND ep.resource = $4 
-		  AND ep.action = $5
-		  AND udp.granted = true
+		  AND udp.permissions ? $3
+		  AND udp.permissions->$3 ? $4
+		  AND udp.is_active = true
 		  AND (udp.expires_at IS NULL OR udp.expires_at > NOW())
 	`
 
+	// 构建权限键，格式为 "module.resource"
+	permissionKey := req.Module + "." + req.Resource
+	
 	var count int
-	err := s.db.QueryRow(query, req.UserID, req.DeviceType, req.Module, req.Resource, req.Action).Scan(&count)
+	err := s.db.QueryRow(query, req.UserID, req.DeviceType, permissionKey, req.Action).Scan(&count)
 	if err != nil {
 		return false, err
 	}
@@ -428,21 +428,19 @@ func (s *PermissionService) checkDirectPermission(req models.UserPermissionCheck
 func (s *PermissionService) checkGroupPermission(req models.UserPermissionCheckRequest) (bool, error) {
 	query := `
 		SELECT COUNT(*)
-		FROM lj_user_group_members ugm
-		INNER JOIN lj_user_group_permissions ugp ON ugm.group_id = ugp.group_id
-		INNER JOIN lj_extended_permissions ep ON ugp.permission_id = ep.id
-		INNER JOIN lj_modules m ON ep.module_id = m.id
-		INNER JOIN lj_device_types dt ON ep.device_type_id = dt.id
+		FROM ug_user_group_members ugm
+		INNER JOIN ug_user_group_permissions ugp ON ugm.group_id = ugp.group_id
+		INNER JOIN az_permissions p ON ugp.permission_id = p.id
+		INNER JOIN sm_device_types dt ON ugp.device_type_id = dt.id
 		WHERE ugm.user_id = $1 
 		  AND dt.code = $2 
-		  AND m.code = $3 
-		  AND ep.resource = $4 
-		  AND ep.action = $5
+		  AND p.resource = $3 
+		  AND p.action = $4
 		  AND ugp.granted = true
 	`
 
 	var count int
-	err := s.db.QueryRow(query, req.UserID, req.DeviceType, req.Module, req.Resource, req.Action).Scan(&count)
+	err := s.db.QueryRow(query, req.UserID, req.DeviceType, req.Resource, req.Action).Scan(&count)
 	if err != nil {
 		return false, err
 	}
@@ -457,9 +455,9 @@ func (s *PermissionService) checkRolePermission(req models.UserPermissionCheckRe
 
 	query := `
 		SELECT COUNT(*)
-		FROM lj_user_roles ur
-		INNER JOIN lj_role_permissions rp ON ur.role_id = rp.role_id
-		INNER JOIN lj_permissions p ON rp.permission_id = p.id
+		FROM az_user_roles ur
+		INNER JOIN az_role_permissions rp ON ur.role_id = rp.role_id
+		INNER JOIN az_permissions p ON rp.permission_id = p.id
 		WHERE ur.user_id = $1 AND p.code = $2
 	`
 
@@ -476,8 +474,8 @@ func (s *PermissionService) checkRolePermission(req models.UserPermissionCheckRe
 func (s *PermissionService) checkSuperAdminRole(userID uuid.UUID) (bool, error) {
 	query := `
 		SELECT COUNT(*)
-		FROM lj_user_roles ur
-		INNER JOIN lj_roles r ON ur.role_id = r.id
+		FROM az_user_roles ur
+		INNER JOIN az_roles r ON ur.role_id = r.id
 		WHERE ur.user_id = $1 AND r.name = 'super_admin'
 	`
 
@@ -496,20 +494,20 @@ func (s *PermissionService) SyncUserPermissions(req models.PermissionSyncRequest
 	query := `
 		SELECT DISTINCT ep.id, ep.module_id, ep.device_type_id, ep.resource, ep.action, 
 			   ep.description, ep.element_type, ep.element_code, ep.created_at
-		FROM lj_extended_permissions ep
-		INNER JOIN lj_device_types dt ON ep.device_type_id = dt.id
+		FROM pe_extended_permissions ep
+		INNER JOIN sm_device_types dt ON ep.device_type_id = dt.id
 		WHERE dt.code = $1
 		  AND (
 			-- 直接权限
 			EXISTS (
-				SELECT 1 FROM lj_user_device_permissions udp 
+				SELECT 1 FROM pe_user_device_permissions udp 
 				WHERE udp.user_id = $2 AND udp.extended_permission_id = ep.id AND udp.grant_type = 'allow'
 			)
 			OR
 			-- 用户组权限
 			EXISTS (
-				SELECT 1 FROM lj_user_group_members ugm
-				INNER JOIN lj_user_group_permissions ugp ON ugm.user_group_id = ugp.user_group_id
+				SELECT 1 FROM ug_user_group_members ugm
+				INNER JOIN ug_user_group_permissions ugp ON ugm.user_group_id = ugp.user_group_id
 				WHERE ugm.user_id = $2 AND ugp.extended_permission_id = ep.id
 			)
 		  )
@@ -545,7 +543,7 @@ func (s *PermissionService) SyncUserPermissions(req models.PermissionSyncRequest
 func (s *PermissionService) GetPermissionTemplates() ([]models.PermissionTemplate, error) {
 	query := `
 		SELECT id, name, description, template_data, is_system, created_at, updated_at
-		FROM lj_permission_templates
+		FROM ug_permission_templates
 		ORDER BY created_at DESC
 	`
 
@@ -577,7 +575,7 @@ func (s *PermissionService) CreatePermissionTemplate(req models.PermissionTempla
 	}
 
 	query := `
-		INSERT INTO lj_permission_templates (name, description, template_data)
+		INSERT INTO ug_permission_templates (name, description, template_data)
 		VALUES ($1, $2, $3)
 		RETURNING id, name, description, template_data, is_system, created_at, updated_at
 	`
@@ -597,7 +595,7 @@ func (s *PermissionService) CreatePermissionTemplate(req models.PermissionTempla
 func (s *PermissionService) ApplyPermissionTemplate(templateID, userID uuid.UUID) error {
 	// 获取模板数据
 	var templateData string
-	err := s.db.QueryRow("SELECT template_data FROM lj_permission_templates WHERE id = $1 AND is_system = true", templateID).Scan(&templateData)
+	err := s.db.QueryRow("SELECT template_data FROM ug_permission_templates WHERE id = $1 AND is_system = true", templateID).Scan(&templateData)
 	if err != nil {
 		return err
 	}
@@ -661,7 +659,7 @@ func (s *PermissionService) WarmupUserCache(userID uuid.UUID) error {
 func (s *PermissionService) GetBasicPermissions() ([]models.BasicPermission, error) {
 	query := `
 		SELECT id, name, resource, action, description, false AS is_system, created_at
-		FROM lj_permissions
+		FROM az_permissions
 		ORDER BY resource, action
 	`
 
@@ -687,7 +685,7 @@ func (s *PermissionService) GetBasicPermissions() ([]models.BasicPermission, err
 func (s *PermissionService) GetBasicPermissionsFiltered(keyword, resource, action string) ([]models.BasicPermission, error) {
 	query := `
 		SELECT id, name, resource, action, description, false AS is_system, created_at
-		FROM lj_permissions
+		FROM az_permissions
 		WHERE 1=1
 	`
 
@@ -753,9 +751,9 @@ func (s *PermissionService) GetPermissionsPaginated(params models.PermissionQuer
 		args = append(args, params.Action)
 		argIndex++
 	}
-	// params.IsSystem 被忽略：lj_permissions 表中没有 is_system 字段
+	// params.IsSystem 被忽略：az_permissions 表中没有 is_system 字段
 
-	base := "FROM lj_permissions WHERE " + strings.Join(whereClauses, " AND ")
+	base := "FROM az_permissions WHERE " + strings.Join(whereClauses, " AND ")
 	// 统计总数
 	countQuery := "SELECT COUNT(*) " + base
 	var total int
@@ -798,7 +796,7 @@ func (s *PermissionService) GetPermissionsPaginated(params models.PermissionQuer
 func (s *PermissionService) CreateBasicPermission(req models.BasicPermissionCreateRequest) (*models.BasicPermission, error) {
 	// 检查重复（resource + action 唯一）
 	var exists int
-	if err := s.db.QueryRow("SELECT COUNT(*) FROM lj_permissions WHERE resource = $1 AND action = $2", req.Resource, req.Action).Scan(&exists); err != nil {
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM az_permissions WHERE resource = $1 AND action = $2", req.Resource, req.Action).Scan(&exists); err != nil {
 		return nil, err
 	}
 	if exists > 0 {
@@ -806,7 +804,7 @@ func (s *PermissionService) CreateBasicPermission(req models.BasicPermissionCrea
 	}
 
 	code := fmt.Sprintf("%s:%s", strings.ToLower(req.Resource), strings.ToLower(req.Action))
-	query := `INSERT INTO lj_permissions (name, resource, action, description, code)
+	query := `INSERT INTO az_permissions (name, resource, action, description, code)
 	          VALUES ($1, $2, $3, $4, $5)
 	          RETURNING id, name, resource, action, description, false AS is_system, created_at`
 	var p models.BasicPermission
@@ -819,7 +817,7 @@ func (s *PermissionService) CreateBasicPermission(req models.BasicPermissionCrea
 
 // 获取基础权限详情
 func (s *PermissionService) GetBasicPermissionByID(id string) (*models.BasicPermission, error) {
-	query := `SELECT id, name, resource, action, description, false AS is_system, created_at FROM lj_permissions WHERE id = $1`
+	query := `SELECT id, name, resource, action, description, false AS is_system, created_at FROM az_permissions WHERE id = $1`
 	var p models.BasicPermission
 	if err := s.db.QueryRow(query, id).Scan(&p.ID, &p.Name, &p.Resource, &p.Action, &p.Description, &p.IsSystem, &p.CreatedAt); err != nil {
 		return nil, err
@@ -857,7 +855,7 @@ func (s *PermissionService) UpdateBasicPermission(id string, req models.BasicPer
 	// 如果资源或动作变化，更新 code
 	if req.Resource != nil || req.Action != nil {
 		var curRes, curAct string
-		if err := s.db.QueryRow("SELECT resource, action FROM lj_permissions WHERE id = $1", id).Scan(&curRes, &curAct); err != nil {
+		if err := s.db.QueryRow("SELECT resource, action FROM az_permissions WHERE id = $1", id).Scan(&curRes, &curAct); err != nil {
 			return nil, err
 		}
 		if req.Resource != nil {
@@ -877,7 +875,7 @@ func (s *PermissionService) UpdateBasicPermission(id string, req models.BasicPer
 		return s.GetBasicPermissionByID(id)
 	}
 
-	query := "UPDATE lj_permissions SET " + strings.Join(sets, ", ") + fmt.Sprintf(" WHERE id = $%d", idx)
+	query := "UPDATE az_permissions SET " + strings.Join(sets, ", ") + fmt.Sprintf(" WHERE id = $%d", idx)
 	args = append(args, id)
 	if _, err := s.db.Exec(query, args...); err != nil {
 		return nil, err
@@ -888,8 +886,8 @@ func (s *PermissionService) UpdateBasicPermission(id string, req models.BasicPer
 // 删除基础权限
 func (s *PermissionService) DeleteBasicPermission(id string) error {
 	// 删除角色-权限关联，避免外键约束
-	_, _ = s.db.Exec("DELETE FROM lj_role_permissions WHERE permission_id = $1", id)
-	_, err := s.db.Exec("DELETE FROM lj_permissions WHERE id = $1", id)
+	_, _ = s.db.Exec("DELETE FROM az_role_permissions WHERE permission_id = $1", id)
+	_, err := s.db.Exec("DELETE FROM az_permissions WHERE id = $1", id)
 	return err
 }
 
@@ -912,11 +910,11 @@ func (s *PermissionService) BatchDeletePermissions(ids []string) error {
 	}
 
 	// 删除角色-权限关联
-	if _, err := tx.Exec("DELETE FROM lj_role_permissions WHERE permission_id IN ("+strings.Join(placeholders, ",")+")", args...); err != nil {
+	if _, err := tx.Exec("DELETE FROM az_role_permissions WHERE permission_id IN ("+strings.Join(placeholders, ",")+")", args...); err != nil {
 		return err
 	}
 	// 删除权限
-	if _, err := tx.Exec("DELETE FROM lj_permissions WHERE id IN ("+strings.Join(placeholders, ",")+")", args...); err != nil {
+	if _, err := tx.Exec("DELETE FROM az_permissions WHERE id IN ("+strings.Join(placeholders, ",")+")", args...); err != nil {
 		return err
 	}
 
@@ -925,7 +923,7 @@ func (s *PermissionService) BatchDeletePermissions(ids []string) error {
 
 // 资源列表
 func (s *PermissionService) GetDistinctResources() ([]string, error) {
-	rows, err := s.db.Query("SELECT DISTINCT resource FROM lj_permissions ORDER BY resource")
+	rows, err := s.db.Query("SELECT DISTINCT resource FROM az_permissions ORDER BY resource")
 	if err != nil {
 		return nil, err
 	}
@@ -943,7 +941,7 @@ func (s *PermissionService) GetDistinctResources() ([]string, error) {
 
 // 动作列表
 func (s *PermissionService) GetDistinctActions() ([]string, error) {
-	rows, err := s.db.Query("SELECT DISTINCT action FROM lj_permissions ORDER BY action")
+	rows, err := s.db.Query("SELECT DISTINCT action FROM az_permissions ORDER BY action")
 	if err != nil {
 		return nil, err
 	}
@@ -964,8 +962,8 @@ func (s *PermissionService) CheckPermissionUsage(id string) (*models.PermissionU
 	// 角色使用
 	roleRows, err := s.db.Query(`
 		SELECT r.id, r.name, r.display_name
-		FROM lj_roles r
-		INNER JOIN lj_role_permissions rp ON rp.role_id = r.id
+		FROM az_roles r
+		INNER JOIN az_role_permissions rp ON rp.role_id = r.id
 		WHERE rp.permission_id = $1
 		ORDER BY r.name ASC`, id)
 	if err != nil {
@@ -984,9 +982,9 @@ func (s *PermissionService) CheckPermissionUsage(id string) (*models.PermissionU
 	// 用户使用（通过角色关联）
 	userRows, err := s.db.Query(`
 		SELECT u.id, u.username, COALESCE(u.name, u.username) as name
-		FROM lj_users u
-		INNER JOIN lj_user_roles ur ON ur.user_id = u.id
-		INNER JOIN lj_role_permissions rp ON rp.role_id = ur.role_id
+		FROM ua_admin u
+		INNER JOIN az_user_roles ur ON ur.user_id = u.id
+		INNER JOIN az_role_permissions rp ON rp.role_id = ur.role_id
 		WHERE rp.permission_id = $1
 		ORDER BY u.username ASC`, id)
 	if err != nil {
@@ -1016,13 +1014,13 @@ func (s *PermissionService) GetPermissionStats() (*models.PermissionStats, error
 		ByAction:   map[string]int{},
 	}
 	// 总数
-	if err := s.db.QueryRow("SELECT COUNT(*) FROM lj_permissions").Scan(&stats.TotalPermissions); err != nil {
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM az_permissions").Scan(&stats.TotalPermissions); err != nil {
 		return nil, err
 	}
 	stats.SystemPermissions = 0
 	stats.CustomPermissions = stats.TotalPermissions - stats.SystemPermissions
 	// 按资源统计
-	resRows, err := s.db.Query("SELECT resource, COUNT(*) FROM lj_permissions GROUP BY resource")
+	resRows, err := s.db.Query("SELECT resource, COUNT(*) FROM az_permissions GROUP BY resource")
 	if err != nil {
 		return nil, err
 	}
@@ -1036,7 +1034,7 @@ func (s *PermissionService) GetPermissionStats() (*models.PermissionStats, error
 		stats.ByResource[k] = v
 	}
 	// 按动作统计
-	actionRows, err := s.db.Query("SELECT action, COUNT(*) FROM lj_permissions GROUP BY action")
+	actionRows, err := s.db.Query("SELECT action, COUNT(*) FROM az_permissions GROUP BY action")
 	if err != nil {
 		return nil, err
 	}
@@ -1050,7 +1048,7 @@ func (s *PermissionService) GetPermissionStats() (*models.PermissionStats, error
 		stats.ByAction[k] = v
 	}
 	// 最近创建的权限（不包括系统权限）
-	recentRows, err := s.db.Query(`SELECT id, name, resource, action, description, false AS is_system, created_at FROM lj_permissions ORDER BY created_at DESC LIMIT 10`)
+	recentRows, err := s.db.Query(`SELECT id, name, resource, action, description, false AS is_system, created_at FROM az_permissions ORDER BY created_at DESC LIMIT 10`)
 	if err != nil {
 		return nil, err
 	}
@@ -1065,8 +1063,8 @@ func (s *PermissionService) GetPermissionStats() (*models.PermissionStats, error
 	// 最常用（被角色引用次数最多）
 	usedRows, err := s.db.Query(`
 		SELECT p.id, p.name, p.resource, p.action, p.description, false AS is_system, p.created_at, COUNT(rp.role_id) as cnt
-		FROM lj_permissions p
-		LEFT JOIN lj_role_permissions rp ON rp.permission_id = p.id
+		FROM az_permissions p
+		LEFT JOIN az_role_permissions rp ON rp.permission_id = p.id
 		GROUP BY p.id, p.name, p.resource, p.action, p.description, p.created_at
 		ORDER BY cnt DESC NULLS LAST, p.resource ASC, p.action ASC
 		LIMIT 10`)
@@ -1118,7 +1116,7 @@ func (s *PermissionService) ImportPermissions(data []byte) (*models.ImportResult
 	}
 	for _, it := range items {
 		var count int
-		if err := s.db.QueryRow("SELECT COUNT(*) FROM lj_permissions WHERE resource = $1 AND action = $2", it.Resource, it.Action).Scan(&count); err != nil {
+		if err := s.db.QueryRow("SELECT COUNT(*) FROM az_permissions WHERE resource = $1 AND action = $2", it.Resource, it.Action).Scan(&count); err != nil {
 			result.Failed++
 			result.Errors = append(result.Errors, fmt.Sprintf("查询失败 %s:%s: %v", it.Resource, it.Action, err))
 			continue
@@ -1126,7 +1124,7 @@ func (s *PermissionService) ImportPermissions(data []byte) (*models.ImportResult
 		code := fmt.Sprintf("%s:%s", strings.ToLower(it.Resource), strings.ToLower(it.Action))
 		if count == 0 {
 			// 插入
-			_, err := s.db.Exec(`INSERT INTO lj_permissions (name, resource, action, description, code) VALUES ($1, $2, $3, $4, $5)`,
+			_, err := s.db.Exec(`INSERT INTO az_permissions (name, resource, action, description, code) VALUES ($1, $2, $3, $4, $5)`,
 				it.Name, it.Resource, it.Action, it.Description, code)
 			if err != nil {
 				result.Failed++
@@ -1136,7 +1134,7 @@ func (s *PermissionService) ImportPermissions(data []byte) (*models.ImportResult
 			result.Success++
 		} else {
 			// 更新名称与描述
-			_, err := s.db.Exec(`UPDATE lj_permissions SET name = $1, description = $2, code = $3 WHERE resource = $4 AND action = $5`,
+			_, err := s.db.Exec(`UPDATE az_permissions SET name = $1, description = $2, code = $3 WHERE resource = $4 AND action = $5`,
 				it.Name, it.Description, code, it.Resource, it.Action)
 			if err != nil {
 				result.Failed++

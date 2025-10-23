@@ -4,10 +4,14 @@ import { RouterProvider } from 'react-router-dom';
 import { ConfigProvider, App } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
 import router from './router';
 import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
+
+// 扩展 dayjs 插件
+dayjs.extend(relativeTime);
 
 // 设置 dayjs 中文语言
 dayjs.locale('zh-cn');

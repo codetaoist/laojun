@@ -72,7 +72,7 @@ func (s *MenuService) GetMenus(params models.MenuSearchParams) (*models.Paginate
 	}
 
 	// 查询总数
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM lj_menus %s", whereClause)
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM sm_menus %s", whereClause)
 	var total int
 	err := s.db.QueryRow(countQuery, args...).Scan(&total)
 	if err != nil {
@@ -83,7 +83,7 @@ func (s *MenuService) GetMenus(params models.MenuSearchParams) (*models.Paginate
 	offset := (params.Page - 1) * params.PageSize
 	dataQuery := fmt.Sprintf(`
 		SELECT id, title, path, icon, component, parent_id, sort_order, is_hidden, is_favorite, created_at, updated_at
-		FROM lj_menus %s
+		FROM sm_menus %s
 		ORDER BY sort_order ASC, created_at DESC
 		LIMIT $%d OFFSET $%d
 	`, whereClause, argIndex, argIndex+1)
@@ -123,7 +123,7 @@ func (s *MenuService) getMenuTree(params models.MenuSearchParams) (*models.Pagin
 	// 获取所有菜单
 	query := `
 		SELECT id, title, path, icon, component, parent_id, sort_order, is_hidden, created_at, updated_at
-		FROM lj_menus
+		FROM sm_menus
 		ORDER BY sort_order ASC, created_at DESC
 	`
 
@@ -178,7 +178,7 @@ func (s *MenuService) getMenuTree(params models.MenuSearchParams) (*models.Pagin
 func (s *MenuService) GetMenuByID(id uuid.UUID) (*models.Menu, error) {
 	query := `
 		SELECT id, title, path, icon, component, parent_id, sort_order, is_hidden, created_at, updated_at
-		FROM lj_menus
+		FROM sm_menus
 		WHERE id = $1
 	`
 
@@ -210,7 +210,7 @@ func (s *MenuService) CreateMenu(req models.MenuCreateRequest) (*models.Menu, er
 	// 如果没有指定排序，设置为最大排序值加1
 	if req.SortOrder == 0 {
 		var maxSort int
-		query := "SELECT COALESCE(MAX(sort_order), 0) FROM lj_menus WHERE parent_id IS NOT DISTINCT FROM $1"
+		query := "SELECT COALESCE(MAX(sort_order), 0) FROM sm_menus WHERE parent_id IS NOT DISTINCT FROM $1"
 		err := s.db.QueryRow(query, req.ParentID).Scan(&maxSort)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get max sort order: %w", err)
@@ -223,7 +223,7 @@ func (s *MenuService) CreateMenu(req models.MenuCreateRequest) (*models.Menu, er
 	now := time.Now()
 
 	query := `
-		INSERT INTO lj_menus (id, title, path, icon, component, parent_id, sort_order, is_hidden, created_at, updated_at)
+		INSERT INTO sm_menus (id, title, path, icon, component, parent_id, sort_order, is_hidden, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id, title, path, icon, component, parent_id, sort_order, is_hidden, created_at, updated_at
 	`
@@ -332,7 +332,7 @@ func (s *MenuService) UpdateMenu(id uuid.UUID, req models.MenuUpdateRequest) (*m
 	args = append(args, id)
 
 	query := fmt.Sprintf(`
-		UPDATE lj_menus 
+		UPDATE sm_menus 
 		SET %s
 		WHERE id = $%d
 		RETURNING id, title, path, icon, component, parent_id, sort_order, is_hidden, created_at, updated_at
@@ -354,7 +354,7 @@ func (s *MenuService) UpdateMenu(id uuid.UUID, req models.MenuUpdateRequest) (*m
 func (s *MenuService) DeleteMenu(id uuid.UUID) error {
 	// 检查是否有子菜单
 	var childCount int
-	err := s.db.QueryRow("SELECT COUNT(*) FROM lj_menus WHERE parent_id = $1", id).Scan(&childCount)
+	err := s.db.QueryRow("SELECT COUNT(*) FROM sm_menus WHERE parent_id = $1", id).Scan(&childCount)
 	if err != nil {
 		return fmt.Errorf("failed to check child menus: %w", err)
 	}
@@ -364,7 +364,7 @@ func (s *MenuService) DeleteMenu(id uuid.UUID) error {
 	}
 
 	// 删除菜单
-	result, err := s.db.Exec("DELETE FROM lj_menus WHERE id = $1", id)
+	result, err := s.db.Exec("DELETE FROM sm_menus WHERE id = $1", id)
 	if err != nil {
 		return fmt.Errorf("failed to delete menu: %w", err)
 	}
@@ -395,7 +395,7 @@ func (s *MenuService) BatchDeleteMenus(ids []uuid.UUID) error {
 		args[i] = id
 	}
 
-	query := fmt.Sprintf("SELECT COUNT(*) FROM lj_menus WHERE parent_id IN (%s)", strings.Join(placeholders, ","))
+	query := fmt.Sprintf("SELECT COUNT(*) FROM sm_menus WHERE parent_id IN (%s)", strings.Join(placeholders, ","))
 	var childCount int
 	err := s.db.QueryRow(query, args...).Scan(&childCount)
 	if err != nil {
@@ -407,7 +407,7 @@ func (s *MenuService) BatchDeleteMenus(ids []uuid.UUID) error {
 	}
 
 	// 批量删除
-	deleteQuery := fmt.Sprintf("DELETE FROM lj_menus WHERE id IN (%s)", strings.Join(placeholders, ","))
+	deleteQuery := fmt.Sprintf("DELETE FROM sm_menus WHERE id IN (%s)", strings.Join(placeholders, ","))
 	_, err = s.db.Exec(deleteQuery, args...)
 	if err != nil {
 		return fmt.Errorf("failed to batch delete menus: %w", err)
@@ -443,7 +443,7 @@ func (s *MenuService) MoveMenu(id uuid.UUID, req models.MenuMoveRequest) error {
 
 	// 更新菜单的父级和排序
 	_, err = tx.Exec(`
-		UPDATE lj_menus 
+		UPDATE sm_menus 
 		SET parent_id = $1, sort_order = $2, updated_at = $3
 		WHERE id = $4
 	`, req.TargetParentID, req.TargetIndex, time.Now(), id)
@@ -465,13 +465,13 @@ func (s *MenuService) GetMenuStats() (*models.MenuStats, error) {
 	var stats models.MenuStats
 
 	// 总菜单数
-	err := s.db.QueryRow("SELECT COUNT(*) FROM lj_menus").Scan(&stats.TotalMenus)
+	err := s.db.QueryRow("SELECT COUNT(*) FROM sm_menus").Scan(&stats.TotalMenus)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get total menus: %w", err)
 	}
 
 	// 可见菜单数
-	err = s.db.QueryRow("SELECT COUNT(*) FROM lj_menus WHERE is_hidden = false").Scan(&stats.VisibleMenus)
+	err = s.db.QueryRow("SELECT COUNT(*) FROM sm_menus WHERE is_hidden = false").Scan(&stats.VisibleMenus)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get visible menus: %w", err)
 	}
@@ -494,7 +494,7 @@ func (s *MenuService) wouldCreateCycle(menuID, targetParentID uuid.UUID) bool {
 		}
 
 		var nextParentID *uuid.UUID
-		err := s.db.QueryRow("SELECT parent_id FROM lj_menus WHERE id = $1", *currentParentID).Scan(&nextParentID)
+		err := s.db.QueryRow("SELECT parent_id FROM sm_menus WHERE id = $1", *currentParentID).Scan(&nextParentID)
 		if err != nil {
 			break
 		}
@@ -508,14 +508,14 @@ func (s *MenuService) wouldCreateCycle(menuID, targetParentID uuid.UUID) bool {
 func (s *MenuService) reorderSiblings(tx *sql.Tx, parentID *uuid.UUID) error {
 	// 获取同级菜单并重新排序
 	query := `
-		UPDATE lj_menus 
+		UPDATE sm_menus 
 		SET sort_order = subquery.new_order
 		FROM (
 			SELECT id, ROW_NUMBER() OVER (ORDER BY sort_order, created_at) as new_order
-			FROM lj_menus 
+			FROM sm_menus 
 			WHERE parent_id IS NOT DISTINCT FROM $1
 		) AS subquery
-		WHERE lj_menus.id = subquery.id
+		WHERE sm_menus.id = subquery.id
 	`
 
 	_, err := tx.Exec(query, parentID)
@@ -525,7 +525,7 @@ func (s *MenuService) reorderSiblings(tx *sql.Tx, parentID *uuid.UUID) error {
 // 新增：切换收藏状态
 func (s *MenuService) ToggleFavorite(id uuid.UUID) (*models.Menu, error) {
 	query := `
-		UPDATE lj_menus 
+		UPDATE sm_menus 
 		SET is_favorite = NOT is_favorite, updated_at = $2
 		WHERE id = $1
 		RETURNING id, title, path, icon, component, parent_id, sort_order, is_hidden, is_favorite, created_at, updated_at

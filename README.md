@@ -2,11 +2,45 @@
 
 ## 快速启动
 
-### 方案一：Docker Compose（推荐）
+### 方案一：统一部署脚本（推荐）
+使用项目提供的统一部署脚本，支持多环境一键部署：
+
+**Windows 用户：**
+```powershell
+# 部署生产环境
+.\deploy.ps1 prod deploy
+
+# 部署开发环境
+.\deploy.ps1 dev deploy
+
+# 查看帮助
+.\deploy.ps1 help
+```
+
+**Linux/macOS 用户：**
+```bash
+# 部署生产环境
+./deploy.sh prod deploy
+
+# 部署开发环境
+./deploy.sh dev deploy
+
+# 查看帮助
+./deploy.sh help
+```
+
+**常用操作：**
+- 构建镜像：`./deploy.sh prod build`
+- 重启服务：`./deploy.sh prod restart`
+- 查看日志：`./deploy.sh prod logs`
+- 健康检查：`./deploy.sh prod health`
+- 停止服务：`./deploy.sh prod stop`
+
+### 方案二：Docker Compose（手动）
 - 前提：安装并启动 Docker Desktop。
 - 构建并启动：
-  - `docker compose -f d:\taishanglaojun\deployments\docker-compose.yml build`
-  - `docker compose -f d:\taishanglaojun\deployments\docker-compose.yml up -d`
+  - `docker compose -f deploy/docker/docker-compose.yml build`
+  - `docker compose -f deploy/docker/docker-compose.yml up -d`
 - 服务与端口：
   - `admin-api`：`http://localhost:8080`
   - `config-center`：`http://localhost:8081`
@@ -17,11 +51,11 @@
   - `curl http://localhost:8081/health`
   - `curl http://localhost:8082/health`
 - 关闭：
-  - `docker compose -f d:\taishanglaojun\deployments\docker-compose.yml down`
+  - `docker compose -f deploy/docker/docker-compose.yml down`
 
-提示：`docker\docker-compose.yml` 提供更完整的栈（含 MinIO/Prometheus/Grafana），在基本栈稳定后再使用。
+提示：生产环境请使用 `deploy/docker/docker-compose.prod.yml`，包含完整的监控栈（Prometheus/Grafana）。
 
-### 方案二：本地开发（单服务调试）
+### 方案三：本地开发（单服务调试）
 - 前提：`Go 1.21+`、`Node.js 18+`、已启动 `postgres`/`redis`（可用上面的 Compose 启动依赖）。
 - 常用环境变量（PowerShell 示例）：
   - `setx DB_HOST "localhost"`
@@ -60,7 +94,14 @@
 - 完成上述最小改动后，再执行构建与启动。
 
 ## 目录与关键文件
-- Compose 文件：`d:\taishanglaojun\deployments\docker-compose.yml`
-- Dockerfile：`d:\taishanglaojun\docker\Dockerfile`
-- 环境配置示例：`d:\taishanglaojun\configs\admin-api.yaml`、`config-center.yaml`
-- 数据库初始化：`d:\taishanglaojun\migrations\`（首次启动 `postgres` 自动执行）
+- 部署脚本：`./deploy.sh`、`./deploy.ps1`（根目录入口）
+- Docker 文件：`deploy/docker/docker-compose.yml`、`deploy/docker/Dockerfile`
+- 环境配置：`deploy/configs/.env.dev`、`deploy/configs/.env.prod`
+- 应用配置：`configs/admin-api.yaml`、`configs/config-center.yaml`
+- 数据库迁移：`db/migrations/`（首次启动 `postgres` 自动执行）
+- 部署文档：`deploy/docs/README.md`（详细部署指南）
+
+## 更多信息
+- 📖 [详细部署指南](deploy/docs/README.md)
+- 🐳 [Docker 使用指南](deploy/docs/docker-guide.md)
+- 🔧 [部署优化说明](deploy/docs/deployment-optimization.md)

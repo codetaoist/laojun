@@ -198,6 +198,95 @@
   text-decoration: none;
 }
 
+/* 验证码容器样式 */
+.captcha-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.captcha-image-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 120px;
+  min-width: 80px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.captcha-image-wrapper:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.captcha-image-wrapper:active {
+  transform: scale(0.98);
+}
+
+.captcha-container .ant-image {
+  width: 100%;
+}
+
+.captcha-container .ant-image img {
+  width: 100% !important;
+  height: 40px !important;
+  object-fit: contain !important;
+  transition: opacity 0.3s ease;
+}
+
+.captcha-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.captcha-loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #1890ff;
+  border-radius: 50%;
+  animation: captcha-spin 1s linear infinite;
+}
+
+@keyframes captcha-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.captcha-hint {
+  font-size: 12px;
+  margin-top: 2px;
+  text-align: center;
+  color: #999 !important;
+}
+
+/* 响应式调整 */
+@media (max-width: 480px) {
+  .captcha-container {
+    gap: 2px;
+  }
+  
+  .captcha-container .ant-image img {
+    height: 35px !important;
+  }
+  
+  .captcha-hint {
+    font-size: 11px;
+  }
+}
+
 .login-footer a:hover {
   text-decoration: underline;
 }

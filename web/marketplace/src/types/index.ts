@@ -322,23 +322,21 @@ export interface ForumCategory {
 // 论坛帖子
 export interface ForumPost {
   id: string;
+  category_id: string;
+  user_id: string;
   title: string;
   content: string;
-  content_type: 'markdown' | 'html' | 'text';
-  author_id: string;
-  author?: User;
-  category_id?: string;
-  category?: ForumCategory;
-  tags?: string[];
+  likes_count: number;
+  replies_count: number;
+  views_count: number;
   is_pinned: boolean;
-  is_featured: boolean;
   is_locked: boolean;
-  view_count: number;
-  reply_count: number;
-  like_count: number;
-  last_reply_at?: string;
   created_at: string;
   updated_at: string;
+  // 关联数据
+  username: string;
+  avatar_url?: string;
+  category_name: string;
 }
 
 // 论坛回复

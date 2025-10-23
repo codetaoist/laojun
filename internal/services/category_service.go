@@ -4,18 +4,18 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/codetaoist/laojun/pkg/shared/database"
+	shareddb "github.com/codetaoist/laojun/pkg/shared/database"
 	"github.com/codetaoist/laojun/pkg/shared/models"
 	"github.com/google/uuid"
 )
 
 // CategoryService 分类服务
 type CategoryService struct {
-	db *database.DB
+	db *shareddb.DB
 }
 
 // NewCategoryService 创建分类服务
-func NewCategoryService(db *database.DB) *CategoryService {
+func NewCategoryService(db *shareddb.DB) *CategoryService {
 	return &CategoryService{db: db}
 }
 
@@ -32,14 +32,30 @@ func (s *CategoryService) GetCategories() ([]models.Category, error) {
 	var categories []models.Category
 	for rows.Next() {
 		var category models.Category
+		var description, icon, color sql.NullString
+		
 		err := rows.Scan(
-			&category.ID, &category.Name, &category.Description,
-			&category.Icon, &category.Color, &category.SortOrder, &category.IsActive,
+			&category.ID, &category.Name, &description,
+			&icon, &color, &category.SortOrder, &category.IsActive,
 			&category.CreatedAt, &category.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan category: %w", err)
 		}
+		
+		// 处理可能为NULL的字段
+		if description.Valid {
+			category.Description = &description.String
+		}
+		if icon.Valid {
+			category.Icon = &icon.String
+		}
+		if color.Valid {
+			category.Color = color.String
+		} else {
+			category.Color = "#1890ff" // 默认颜色
+		}
+		
 		categories = append(categories, category)
 	}
 
@@ -55,9 +71,11 @@ func (s *CategoryService) GetCategory(categoryID uuid.UUID) (*models.Category, e
 	query := "SELECT id, name, description, icon, color, sort_order, is_active, created_at, updated_at FROM mp_categories WHERE id = $1"
 
 	var category models.Category
+	var description, icon, color sql.NullString
+	
 	err := s.db.QueryRow(query, categoryID).Scan(
-		&category.ID, &category.Name, &category.Description,
-		&category.Icon, &category.Color, &category.SortOrder, &category.IsActive,
+		&category.ID, &category.Name, &description,
+		&icon, &color, &category.SortOrder, &category.IsActive,
 		&category.CreatedAt, &category.UpdatedAt,
 	)
 	if err != nil {
@@ -65,6 +83,19 @@ func (s *CategoryService) GetCategory(categoryID uuid.UUID) (*models.Category, e
 			return nil, fmt.Errorf("category not found")
 		}
 		return nil, fmt.Errorf("failed to get category: %w", err)
+	}
+
+	// 处理可能为NULL的字段
+	if description.Valid {
+		category.Description = &description.String
+	}
+	if icon.Valid {
+		category.Icon = &icon.String
+	}
+	if color.Valid {
+		category.Color = color.String
+	} else {
+		category.Color = "#1890ff" // 默认颜色
 	}
 
 	return &category, nil
