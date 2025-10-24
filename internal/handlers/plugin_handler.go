@@ -186,8 +186,8 @@ func (h *PluginHandler) GetPluginsByCategory(c *gin.Context) {
 // GetUserFavorites 获取用户收藏的插件
 func (h *PluginHandler) GetUserFavorites(c *gin.Context) {
 	// 获取用户ID
-	userID, exists := c.Get("user_id")
-	if !exists {
+	userUUID, ok := utils.GetUserIDFromContext(c)
+	if !ok {
 		utils.UnauthorizedResponse(c)
 		return
 	}
@@ -208,7 +208,7 @@ func (h *PluginHandler) GetUserFavorites(c *gin.Context) {
 		}
 	}
 
-	plugins, meta, err := h.pluginService.GetUserFavorites(userID.(uuid.UUID), page, limit)
+	plugins, meta, err := h.pluginService.GetUserFavorites(userUUID, page, limit)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, "Failed to get user favorites")
 		return
@@ -220,8 +220,8 @@ func (h *PluginHandler) GetUserFavorites(c *gin.Context) {
 // PurchasePlugin 购买插件
 func (h *PluginHandler) PurchasePlugin(c *gin.Context) {
 	// 获取用户ID
-	userID, exists := c.Get("user_id")
-	if !exists {
+	userUUID, ok := utils.GetUserIDFromContext(c)
+	if !ok {
 		utils.UnauthorizedResponse(c)
 		return
 	}
@@ -233,7 +233,7 @@ func (h *PluginHandler) PurchasePlugin(c *gin.Context) {
 		return
 	}
 
-	err = h.pluginService.PurchasePlugin(userID.(uuid.UUID), pluginID)
+	err = h.pluginService.PurchasePlugin(userUUID, pluginID)
 	if err != nil {
 		if err.Error() == "plugin already purchased" {
 			utils.BadRequestResponse(c, "Plugin already purchased")
@@ -249,8 +249,8 @@ func (h *PluginHandler) PurchasePlugin(c *gin.Context) {
 // GetUserPurchases 获取用户购买的插件
 func (h *PluginHandler) GetUserPurchases(c *gin.Context) {
 	// 获取用户ID
-	userID, exists := c.Get("user_id")
-	if !exists {
+	userUUID, ok := utils.GetUserIDFromContext(c)
+	if !ok {
 		utils.UnauthorizedResponse(c)
 		return
 	}
@@ -271,7 +271,7 @@ func (h *PluginHandler) GetUserPurchases(c *gin.Context) {
 		}
 	}
 
-	purchases, meta, err := h.pluginService.GetUserPurchases(userID.(uuid.UUID), page, limit)
+	purchases, meta, err := h.pluginService.GetUserPurchases(userUUID, page, limit)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, "Failed to get user purchases")
 		return
@@ -413,8 +413,8 @@ func (h *PluginHandler) UpdatePluginStatus(c *gin.Context) {
 // ToggleFavorite 切换收藏状态
 func (h *PluginHandler) ToggleFavorite(c *gin.Context) {
 	// 获取用户ID
-	userID, exists := c.Get("user_id")
-	if !exists {
+	userUUID, ok := utils.GetUserIDFromContext(c)
+	if !ok {
 		utils.UnauthorizedResponse(c)
 		return
 	}
@@ -426,7 +426,7 @@ func (h *PluginHandler) ToggleFavorite(c *gin.Context) {
 		return
 	}
 
-	isFavorited, err := h.pluginService.ToggleFavorite(userID.(uuid.UUID), pluginID)
+	isFavorited, err := h.pluginService.ToggleFavorite(userUUID, pluginID)
 	if err != nil {
 		utils.InternalServerErrorResponse(c, "Failed to toggle favorite")
 		return

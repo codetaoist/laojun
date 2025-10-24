@@ -1,0 +1,22 @@
+source_dir: ../../internal
+output_dir: ../../docs/api/swagger
+output_format: json
+include_files:
+    - '**/*.go'
+exclude_files:
+    - '*_test.go'
+info:
+    title: Laojun API
+    description: Laojun Platform API Documentation
+    version: 1.0.0
+    contact:
+        name: Laojun Team
+        email: team@laojun.com
+    license:
+        name: MIT
+        url: https://opensource.org/licenses/MIT
+servers:
+    - url: http://localhost:8080
+      description: Development server
+security:
+    - bearerAuth: []

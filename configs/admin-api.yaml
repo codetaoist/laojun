@@ -1,38 +1,42 @@
-# Admin API service configuration (example)
+# Admin API 配置文件
+# 继承基础配置: configs/base.yaml
+extends: "base.yaml"
+
+app:
+  name: "admin-api"
+  version: "1.0.0"
+  env: "development"
+  debug: true
+
 server:
-  host: 0.0.0.0
+  host: "0.0.0.0"
   port: 8080
-  cors:
-    enabled: true
-    origins:
-      - "*"
-security:
-  jwtSecret: "change-me-in-production"
-  mfaEnabled: false
-logging:
-  level: info
-  format: json
-  output: file
-  file: 
-    path: "var/log/laojun/laojun.log"
+  mode: "debug"
+
+# 覆盖基础配置中的数据库设置
 database:
-  postgres:
-    host: localhost
-    port: 5432
-    user: laojun
-    password: "change-me"
-    dbname: laojun
-    sslmode: disable
-  redis:
-    host: localhost
-    port: 6379
-    db: 0
-    password: ""
-  influxdb:
-    url: "http://localhost:8086"
-    token: ""
-    org: "default"
-    bucket: "metrics"
+  host: "localhost"
+  port: 3306
+  username: "root"
+  password: "123456"
+  dbname: "laojun_admin"
+
+# 覆盖基础配置中的Redis设置
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+
+# 覆盖基础配置中的JWT设置
+jwt:
+  secret: "your-secret-key"
+  expire: 7200
+
+# 覆盖基础配置中的日志设置
+log:
+  level: "debug"
+  filename: "logs/admin-api.log"
 objectStorage:
   minio:
     endpoint: "http://localhost:9000"

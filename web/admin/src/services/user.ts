@@ -7,14 +7,12 @@ export interface CreateUserRequest {
   email: string;
   password: string;
   avatar?: string;
-  bio?: string;
 }
 
 export interface UpdateUserRequest {
   username?: string;
   email?: string;
   avatar?: string;
-  bio?: string;
   isActive?: boolean;
 }
 
@@ -24,7 +22,6 @@ interface BackendUserResponse {
   username: string;
   email: string;
   avatar?: string | null;
-  bio?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;

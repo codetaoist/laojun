@@ -83,10 +83,9 @@ func (s *DeveloperService) RegisterDeveloper(userID uuid.UUID, companyName, webs
 // GetDeveloper 获取开发者信息
 func (s *DeveloperService) GetDeveloper(developerID uuid.UUID) (*Developer, error) {
 	query := `
-		SELECT 
-			d.id, d.user_id, d.company_name, d.website, d.description, 
-			d.is_verified, d.is_active, d.created_at, d.updated_at,
-			u.username, u.email, u.bio
+		SELECT d.id, d.user_id, d.company_name, d.website, d.description,
+			   d.is_verified, d.is_active, d.created_at, d.updated_at,
+			   u.username, u.email
 		FROM mp_developers d
 		JOIN mp_users u ON d.user_id = u.id
 		WHERE d.id = $1`
@@ -97,7 +96,7 @@ func (s *DeveloperService) GetDeveloper(developerID uuid.UUID) (*Developer, erro
 		&developer.ID, &developer.UserID, &developer.CompanyName, &developer.Website,
 		&developer.Description, &developer.IsVerified, &developer.IsActive,
 		&developer.CreatedAt, &developer.UpdatedAt,
-		&user.Username, &user.Email, &user.Bio,
+		&user.Username, &user.Email,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -116,7 +115,7 @@ func (s *DeveloperService) GetDeveloperByUserID(userID uuid.UUID) (*Developer, e
 		SELECT 
 			d.id, d.user_id, d.company_name, d.website, d.description, 
 			d.is_verified, d.is_active, d.created_at, d.updated_at,
-			u.username, u.email, u.bio
+			u.username, u.email
 		FROM mp_developers d
 		JOIN mp_users u ON d.user_id = u.id
 		WHERE d.user_id = $1`
@@ -127,7 +126,7 @@ func (s *DeveloperService) GetDeveloperByUserID(userID uuid.UUID) (*Developer, e
 		&developer.ID, &developer.UserID, &developer.CompanyName, &developer.Website,
 		&developer.Description, &developer.IsVerified, &developer.IsActive,
 		&developer.CreatedAt, &developer.UpdatedAt,
-		&user.Username, &user.Email, &user.Bio,
+		&user.Username, &user.Email,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -338,7 +337,7 @@ func (s *DeveloperService) GetDevelopers(page, limit int, verified *bool) ([]Dev
 		SELECT 
 			d.id, d.user_id, d.company_name, d.website, d.description, 
 			d.is_verified, d.is_active, d.created_at, d.updated_at,
-			u.username, u.email, u.bio
+			u.username, u.email
 		FROM mp_developers d
 		JOIN mp_users u ON d.user_id = u.id
 		%s
@@ -362,7 +361,7 @@ func (s *DeveloperService) GetDevelopers(page, limit int, verified *bool) ([]Dev
 			&developer.ID, &developer.UserID, &developer.CompanyName, &developer.Website,
 			&developer.Description, &developer.IsVerified, &developer.IsActive,
 			&developer.CreatedAt, &developer.UpdatedAt,
-			&user.Username, &user.Email, &user.Bio,
+			&user.Username, &user.Email,
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to scan developer: %w", err)

@@ -11,7 +11,6 @@ CREATE INDEX IF NOT EXISTS idx_mp_users_is_active ON mp_users(is_active);
 CREATE INDEX IF NOT EXISTS idx_mp_users_created_at ON mp_users(created_at);
 
 -- mp_categories indexes
-CREATE INDEX IF NOT EXISTS idx_mp_categories_parent_id ON mp_categories(parent_id);
 CREATE INDEX IF NOT EXISTS idx_mp_categories_is_active ON mp_categories(is_active);
 CREATE INDEX IF NOT EXISTS idx_mp_categories_sort_order ON mp_categories(sort_order);
 
@@ -30,7 +29,6 @@ CREATE INDEX IF NOT EXISTS idx_mp_plugin_reviews_rating ON mp_plugin_reviews(rat
 CREATE INDEX IF NOT EXISTS idx_mp_plugin_reviews_created_at ON mp_plugin_reviews(created_at);
 
 -- mp_forum_categories indexes
-CREATE INDEX IF NOT EXISTS idx_mp_forum_categories_parent_id ON mp_forum_categories(parent_id);
 CREATE INDEX IF NOT EXISTS idx_mp_forum_categories_is_active ON mp_forum_categories(is_active);
 CREATE INDEX IF NOT EXISTS idx_mp_forum_categories_sort_order ON mp_forum_categories(sort_order);
 

@@ -20,14 +20,14 @@ export default defineConfig({
     host: true,
     proxy: {
         '/api/v1': {
-          target: 'http://localhost:8081',
+          target: 'http://localhost:8082',
           changeOrigin: true,
           secure: false,
         },
       },
   },
   build: {
-    outDir: '../../../var/www/laojun/marketplace-web',
+    outDir: 'dist',
     emptyOutDir: true,
     sourcemap: false,
   },

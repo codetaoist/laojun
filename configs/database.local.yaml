@@ -1,0 +1,35 @@
+# Database & cache configuration - 本地开发环境
+postgres:
+  host: localhost
+  port: 5432
+  user: laojun
+  password: "laojun123"
+  dbname: laojun_local
+  sslmode: disable
+  maxOpenConns: 25
+  maxIdleConns: 5
+  connMaxLifetime: 300s
+  
+redis:
+  host: localhost
+  port: 6379
+  db: 0
+  password: "redis123"
+  poolSize: 10
+  minIdleConns: 5
+  dialTimeout: 5s
+  readTimeout: 3s
+  writeTimeout: 3s
+  
+influxdb:
+  url: "http://localhost:8086"
+  token: ""
+  org: "laojun-local"
+  bucket: "metrics-local"
+  
+minio:
+  endpoint: "http://localhost:9000"
+  accessKey: "minioadmin"
+  secretKey: "minioadmin"
+  bucket: "laojun-local"
+  useSSL: false

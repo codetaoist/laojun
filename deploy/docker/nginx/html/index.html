@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>老君开发环境 - 测试页面</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 3rem;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .status {
+            font-size: 1.2rem;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+        .services {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        .service {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 1rem;
+            border-radius: 10px;
+            transition: transform 0.3s ease;
+        }
+        .service:hover {
+            transform: translateY(-5px);
+        }
+        .service h3 {
+            margin: 0 0 0.5rem 0;
+            color: #ffd700;
+        }
+        .service-status {
+            color: #90EE90;
+            font-weight: bold;
+        }
+        .links {
+            margin-top: 2rem;
+        }
+        .link {
+            display: inline-block;
+            margin: 0.5rem;
+            padding: 0.8rem 1.5rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .link:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 老君开发环境</h1>
+        <div class="status">
+            <strong>✅ 环境状态：运行中</strong>
+        </div>
+        
+        <div class="services">
+            <div class="service">
+                <h3>🌐 Nginx</h3>
+                <div class="service-status">运行中</div>
+                <small>端口: 80, 443</small>
+            </div>
+            <div class="service">
+                <h3>🐘 PostgreSQL</h3>
+                <div class="service-status">运行中</div>
+                <small>端口: 5432</small>
+            </div>
+            <div class="service">
+                <h3>🔴 Redis</h3>
+                <div class="service-status">运行中</div>
+                <small>端口: 6379</small>
+            </div>
+        </div>
+
+        <div class="links">
+            <a href="http://localhost:8090" class="link" target="_blank">
+                📊 Adminer (数据库管理)
+            </a>
+            <a href="http://localhost:8091" class="link" target="_blank">
+                🔧 Redis Commander
+            </a>
+        </div>
+
+        <div style="margin-top: 2rem; font-size: 0.9rem; opacity: 0.8;">
+            <p>🎉 恭喜！您的开发环境已成功启动</p>
+            <p>现在可以开始开发您的应用程序了</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -34,8 +34,37 @@ func Initialize(cfg config.DatabaseConfig) (*sql.DB, error) {
 
 // RunMigrations 运行数据库迁移
 func RunMigrations(db *sql.DB) error {
-	log.Println("Skipping database migrations - using existing database schema")
+	log.Println("开始运行数据库迁移...")
+	
+	// 创建完整迁移器
+	migrator := NewCompleteMigrator(db)
+	
+	// 运行完整迁移
+	if err := migrator.RunCompleteMigration(); err != nil {
+		log.Printf("完整迁移执行失败: %v", err)
+		return fmt.Errorf("完整迁移执行失败: %w", err)
+	}
+	
+	log.Println("数据库迁移完成")
 	return nil
+}
+
+// RunCompleteMigrations 运行完整数据库迁移（新增函数）
+func RunCompleteMigrations(db *sql.DB) error {
+	migrator := NewCompleteMigrator(db)
+	return migrator.RunCompleteMigration()
+}
+
+// GetMigrationStatus 获取迁移状态（新增函数）
+func GetMigrationStatus(db *sql.DB) error {
+	migrator := NewCompleteMigrator(db)
+	return migrator.GetMigrationStatus()
+}
+
+// ResetDatabase 重置数据库（新增函数）
+func ResetDatabase(db *sql.DB) error {
+	migrator := NewCompleteMigrator(db)
+	return migrator.ResetDatabase()
 }
 
 // getDSNFromDB 从现有数据库连接获取DSN（这是一个简化的实现）

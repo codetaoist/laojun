@@ -82,12 +82,14 @@
 - 完成上述最小改动后，再执行构建与启动。
 
 ## 目录与关键文件
-- 部署脚本：`./deploy.ps1`、`./start.ps1`（根目录入口）
+- 启动脚本：`./start.ps1`（统一启动入口）、`./test.ps1`（统一测试入口）
+- 部署脚本：`./deploy.ps1`、`scripts/deployment/`（分类存放）
 - Docker 文件：`deploy/docker/docker-compose.yml`、`deploy/docker/Dockerfile`
-- 环境配置：`deploy/configs/.env`（默认）、`deploy/configs/.env.development`、`deploy/configs/.env.staging`、`deploy/configs/.env.production`
+- 环境配置：`config/environments/`（统一配置管理）
 - 应用配置：`configs/admin-api.yaml`、`configs/config-center.yaml`
 - 数据库迁移：`db/migrations/`（首次启动 `postgres` 自动执行）
-- 部署文档：`deploy/docs/README.md`（详细部署指南）
+- 部署文档：`deploy/README.md`（详细部署指南）
+- 项目报告：`docs/reports/`（分析和状态报告）
 
 ## 更多信息
 - 📖 [详细部署指南](deploy/docs/README.md)

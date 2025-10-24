@@ -107,6 +107,31 @@ export const authService = {
     return Promise.reject(new Error('Change password not implemented'));
   },
 
+  // 获取验证码配置
+  getCaptchaConfig: async (): Promise<{ enabled: boolean; type: string }> => {
+    try {
+      const result = await request.get('/auth/captcha/config');
+      return result.data;
+    } catch (error) {
+      console.error('获取验证码配置失败:', error)
+      // 默认返回启用状态，保持向后兼容
+      return { enabled: true, type: 'image' };
+    }
+  },
+
+  // 获取验证码配置
+  getCaptchaConfig: async (): Promise<{ enabled: boolean; type: string }> => {
+    try {
+      const result = await request.get('/auth/captcha/config');
+      console.log('验证码配置API响应:', result);
+      // 后端返回格式: { success: true, data: { enabled: boolean, type: string } }
+      return result.data || result;
+    } catch (error) {
+      console.error('获取验证码配置失败:', error);
+      throw error;
+    }
+  },
+
   // 获取验证码
   getCaptcha: async (): Promise<{ image: string; key: string }> => {
     console.log('调用验证码API...')

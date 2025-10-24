@@ -11,7 +11,7 @@ type SystemSetting struct {
 	ID          uuid.UUID `json:"id" db:"id"`
 	Key         string    `json:"key" db:"key"`
 	Value       string    `json:"value" db:"value"` // JSON字符串，兼容多类型存储
-	Type        string    `json:"type" db:"type"`   // string, number, boolean, json
+	Type        string    `json:"type" db:"data_type"`   // string, number, boolean, json
 	Category    string    `json:"category" db:"category"`
 	Description string    `json:"description" db:"description"`
 	IsPublic    bool      `json:"is_public" db:"is_public"`

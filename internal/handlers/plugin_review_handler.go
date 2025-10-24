@@ -102,9 +102,19 @@ func (h *PluginReviewHandler) GetMyReviewTasks(c *gin.Context) {
 		return
 	}
 
-	reviewerUUID, err := uuid.Parse(userID.(string))
-	if err != nil {
-		utils.BadRequestResponse(c, "Invalid user ID")
+	var reviewerUUID uuid.UUID
+	switch v := userID.(type) {
+	case uuid.UUID:
+		reviewerUUID = v
+	case string:
+		var err error
+		reviewerUUID, err = uuid.Parse(v)
+		if err != nil {
+			utils.BadRequestResponse(c, "Invalid user ID format")
+			return
+		}
+	default:
+		utils.BadRequestResponse(c, "Invalid user ID type")
 		return
 	}
 

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/codetaoist/laojun/pkg/shared/models"
 )
 
@@ -100,4 +101,24 @@ func NotImplementedResponse(c *gin.Context) {
 		Message:   "Not implemented",
 		Timestamp: time.Now(),
 	})
+}
+
+// GetUserIDFromContext 从Gin上下文中获取用户ID并转换为uuid.UUID类型
+func GetUserIDFromContext(c *gin.Context) (uuid.UUID, bool) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		return uuid.Nil, false
+	}
+
+	switch v := userID.(type) {
+	case uuid.UUID:
+		return v, true
+	case string:
+		if parsed, err := uuid.Parse(v); err == nil {
+			return parsed, true
+		}
+		return uuid.Nil, false
+	default:
+		return uuid.Nil, false
+	}
 }

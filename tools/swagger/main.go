@@ -799,7 +799,9 @@ func serveCmd() *cobra.Command {
 		Short: "Serve Swagger documentation",
 		Long:  "Start a web server to serve the Swagger documentation",
 		Run: func(cmd *cobra.Command, args []string) {
-			serveSwagger(port, dir)
+			if err := serveSwagger(port, dir); err != nil {
+				log.Fatalf("Failed to serve swagger: %v", err)
+			}
 		},
 	}
 
@@ -809,7 +811,7 @@ func serveCmd() *cobra.Command {
 	return cmd
 }
 
-func serveSwagger(port int, dir string) {
+func serveSwagger(port int, dir string) error {
 	fmt.Printf("🚀 Starting Swagger documentation server on port %d...\n", port)
 	fmt.Printf("📖 Documentation available at: http://localhost:%d\n", port)
 

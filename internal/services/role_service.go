@@ -370,10 +370,10 @@ func (s *RoleService) AssignPermissionsToRole(roleID uuid.UUID, permissionIDs []
 func (s *RoleService) GetUserByID(id uuid.UUID) (*models.UserResponse, error) {
 	var user models.UserResponse
 	err := s.db.QueryRow(`
-        SELECT id, username, email, avatar, bio, is_active, created_at, updated_at, last_login_at
+        SELECT id, username, email, avatar_url, is_active, created_at, updated_at, last_login_at
         FROM ua_admin WHERE id = $1
     `, id).Scan(
-		&user.ID, &user.Username, &user.Email, &user.Avatar, &user.Bio,
+		&user.ID, &user.Username, &user.Email, &user.Avatar,
 		&user.IsActive, &user.CreatedAt, &user.UpdatedAt, &user.LastLoginAt,
 	)
 	if err != nil {

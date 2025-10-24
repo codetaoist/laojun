@@ -75,8 +75,11 @@ type LogConfig struct {
 
 // SecurityConfig 安全相关配置
 type SecurityConfig struct {
-	EnableCaptcha bool          `json:"enable_captcha"`
-	CaptchaTTL    time.Duration `json:"captcha_ttl"`
+	EnableCaptcha          bool          `json:"enable_captcha"`
+	CaptchaTTL            time.Duration `json:"captcha_ttl"`
+	AdminCaptchaEnabled   bool          `json:"admin_captcha_enabled"`
+	MarketplaceCaptchaEnabled bool      `json:"marketplace_captcha_enabled"`
+	CaptchaType           string        `json:"captcha_type"`
 }
 
 // LoadConfig 从环境变量加载配置
@@ -126,8 +129,11 @@ func LoadConfig() (*Config, error) {
 			File:   getEnv("LOG_FILE", "app.log"),
 		},
 		Security: SecurityConfig{
-			EnableCaptcha: getEnvAsBool("SECURITY_ENABLE_CAPTCHA", true),
-			CaptchaTTL:    getEnvAsDuration("SECURITY_CAPTCHA_TTL", 2*time.Minute),
+			EnableCaptcha:             getEnvAsBool("SECURITY_ENABLE_CAPTCHA", true),
+			CaptchaTTL:               getEnvAsDuration("SECURITY_CAPTCHA_TTL", 2*time.Minute),
+			AdminCaptchaEnabled:      getEnvAsBool("ADMIN_CAPTCHA_ENABLED", false),
+			MarketplaceCaptchaEnabled: getEnvAsBool("MARKETPLACE_CAPTCHA_ENABLED", false),
+			CaptchaType:              getEnv("CAPTCHA_TYPE", "image"),
 		},
 	}
 

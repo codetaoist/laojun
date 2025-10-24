@@ -50,7 +50,7 @@ func NewAdminAuthService(db *shareddb.DB) *AdminAuthService {
 func (s *AdminAuthService) Login(req *AdminLoginRequest) (*AdminUser, error) {
 	// 根据用户名或邮箱查找用户
 	query := `
-		SELECT id, username, email, password_hash, avatar, bio, 
+		SELECT id, username, email, password_hash, avatar_url, 
 			   is_active, created_at, updated_at, last_login_at
 		FROM ua_admin 
 		WHERE (username = $1 OR email = $1) AND is_active = true`
@@ -61,7 +61,6 @@ func (s *AdminAuthService) Login(req *AdminLoginRequest) (*AdminUser, error) {
 		email        string
 		passwordHash string
 		avatar       sql.NullString
-		bio          sql.NullString
 		isActive     bool
 		createdAt    time.Time
 		updatedAt    time.Time
@@ -69,7 +68,7 @@ func (s *AdminAuthService) Login(req *AdminLoginRequest) (*AdminUser, error) {
 	)
 
 	err := s.db.QueryRow(query, req.Username).Scan(
-		&id, &username, &email, &passwordHash, &avatar, &bio,
+		&id, &username, &email, &passwordHash, &avatar,
 		&isActive, &createdAt, &updatedAt, &lastLoginAt,
 	)
 	if err != nil {
@@ -110,9 +109,6 @@ func (s *AdminAuthService) Login(req *AdminLoginRequest) (*AdminUser, error) {
 	if avatar.Valid {
 		user.User.Avatar = &avatar.String
 	}
-	if bio.Valid {
-		user.User.Bio = &bio.String
-	}
 
 	return user, nil
 }
@@ -120,7 +116,7 @@ func (s *AdminAuthService) Login(req *AdminLoginRequest) (*AdminUser, error) {
 // GetUserByID 根据ID获取后台用户
 func (s *AdminAuthService) GetUserByID(userID uuid.UUID) (*AdminUser, error) {
 	query := `
-		SELECT id, username, email, avatar, bio, 
+		SELECT id, username, email, avatar_url, 
 			   is_active, created_at, updated_at, last_login_at
 		FROM ua_admin 
 		WHERE id = $1 AND is_active = true`
@@ -130,7 +126,6 @@ func (s *AdminAuthService) GetUserByID(userID uuid.UUID) (*AdminUser, error) {
 		username    string
 		email       string
 		avatar      sql.NullString
-		bio         sql.NullString
 		isActive    bool
 		createdAt   time.Time
 		updatedAt   time.Time
@@ -138,7 +133,7 @@ func (s *AdminAuthService) GetUserByID(userID uuid.UUID) (*AdminUser, error) {
 	)
 
 	err := s.db.QueryRow(query, userID).Scan(
-		&id, &username, &email, &avatar, &bio,
+		&id, &username, &email, &avatar,
 		&isActive, &createdAt, &updatedAt, &lastLoginAt,
 	)
 	if err != nil {
@@ -161,9 +156,6 @@ func (s *AdminAuthService) GetUserByID(userID uuid.UUID) (*AdminUser, error) {
 
 	if avatar.Valid {
 		user.User.Avatar = &avatar.String
-	}
-	if bio.Valid {
-		user.User.Bio = &bio.String
 	}
 	if lastLoginAt.Valid {
 		user.User.LastLoginAt = &lastLoginAt.Time

@@ -29,12 +29,12 @@ type Plugin struct {
 	ReviewStatus           string     `json:"review_status" db:"review_status"`
 	ReviewPriority         string     `json:"review_priority" db:"review_priority"`
 	AutoReviewScore        *float64   `json:"auto_review_score" db:"auto_review_score"`
-	AutoReviewResult       string     `json:"auto_review_result" db:"auto_review_result"`
-	ReviewNotes            string     `json:"review_notes" db:"review_notes"`
+	AutoReviewResult       *string    `json:"auto_review_result" db:"auto_review_result"`
+	ReviewNotes            *string    `json:"review_notes" db:"review_notes"`
 	ReviewedAt             *time.Time `json:"reviewed_at" db:"reviewed_at"`
 	ReviewerID             *uuid.UUID `json:"reviewer_id" db:"reviewer_id"`
 	SubmittedForReviewAt   *time.Time `json:"submitted_for_review_at" db:"submitted_for_review_at"`
-	RejectionReason        string     `json:"rejection_reason" db:"rejection_reason"`
+	RejectionReason        *string    `json:"rejection_reason" db:"rejection_reason"`
 	AppealCount            int        `json:"appeal_count" db:"appeal_count"`
 	LastAppealAt           *time.Time `json:"last_appeal_at" db:"last_appeal_at"`
 

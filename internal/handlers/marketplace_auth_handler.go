@@ -82,7 +82,7 @@ func (h *MarketplaceAuthHandler) Login(c *gin.Context) {
 	}
 
 	// 根据配置决定是否校验验证码
-	if h.cfg != nil && h.cfg.Security.EnableCaptcha {
+	if h.cfg != nil && h.cfg.Security.MarketplaceCaptchaEnabled {
 		if req.Captcha == "" || req.CaptchaKey == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "缺少验证码参数"})
 			return
@@ -141,20 +141,26 @@ func (h *MarketplaceAuthHandler) GetProfile(c *gin.Context) {
 		return
 	}
 
-	userIDStr, ok := userID.(string)
-	if !ok {
+	var userUUID uuid.UUID
+	var err error
+
+	// 支持uuid.UUID和string两种类型
+	switch v := userID.(type) {
+	case uuid.UUID:
+		userUUID = v
+	case string:
+		userUUID, err = uuid.Parse(v)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "invalid_user_id",
+				"message": "无效的用户ID",
+			})
+			return
+		}
+	default:
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "internal_error",
 			"message": "用户ID格式错误",
-		})
-		return
-	}
-
-	userUUID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid_user_id",
-			"message": "无效的用户ID",
 		})
 		return
 	}
@@ -175,7 +181,6 @@ func (h *MarketplaceAuthHandler) GetProfile(c *gin.Context) {
 			"email":             user.Email,
 			"full_name":         user.FullName,
 			"avatar":            user.Avatar,
-			"bio":               user.Bio,
 			"is_email_verified": user.IsEmailVerified,
 			"created_at":        user.CreatedAt,
 			"updated_at":        user.UpdatedAt,
@@ -355,3 +360,14 @@ func svgMarketplaceCaptcha(code string, width, height int) string {
 }
 
 func fmtMarketplaceInt(n int) string { return strconv.FormatInt(int64(n), 10) }
+
+// GetCaptchaConfig 获取验证码配置
+func (h *MarketplaceAuthHandler) GetCaptchaConfig(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"enabled": h.cfg.Security.MarketplaceCaptchaEnabled,
+			"type":    h.cfg.Security.CaptchaType,
+		},
+	})
+}

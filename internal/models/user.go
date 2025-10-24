@@ -16,7 +16,6 @@ type UserCreateRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`
 	Avatar   string `json:"avatar"`
-	Bio      string `json:"bio"`
 }
 
 // UserUpdateRequest 更新用户请求
@@ -24,7 +23,6 @@ type UserUpdateRequest struct {
 	Username string `json:"username" binding:"omitempty,min=3,max=50"`
 	Email    string `json:"email" binding:"omitempty,email"`
 	Avatar   string `json:"avatar"`
-	Bio      string `json:"bio"`
 	IsActive *bool  `json:"is_active"`
 }
 
@@ -34,7 +32,6 @@ type UserResponse struct {
 	Username    string     `json:"username"`
 	Email       string     `json:"email"`
 	Avatar      *string    `json:"avatar"`
-	Bio         *string    `json:"bio"`
 	IsActive    bool       `json:"is_active"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`

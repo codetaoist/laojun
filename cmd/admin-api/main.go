@@ -213,7 +213,9 @@ pluginService := services.NewPluginService(sharedDB)
 	router.GET("/metrics", gin.WrapH(metricsInstance.Handler()))
 
 	// 设置业务路由
+	fmt.Println("About to call SetupRoutes...")
 	router = routes.SetupRoutes(adminAuthService, userService, permissionService, pluginService, redisClient, cfg, db)
+	fmt.Println("SetupRoutes completed")
 	// 在最终路由上重新应用中间件链
 	middlewareChain.Apply(router)
 	// 重新添加健康与指标端点到最终路由

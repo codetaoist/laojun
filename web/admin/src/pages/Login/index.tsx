@@ -16,6 +16,7 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [captcha, setCaptcha] = useState<{ image: string; key: string } | null>(null);
   const [captchaRefreshing, setCaptchaRefreshing] = useState(false);
+  const [captchaEnabled, setCaptchaEnabled] = useState(true); // 验证码是否启用
   const hasFetchedCaptchaRef = useRef(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,6 +32,32 @@ const Login: React.FC = () => {
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, location]);
+
+  // 获取验证码配置
+  useEffect(() => {
+    const fetchCaptchaConfig = async () => {
+      try {
+        const config = await authService.getCaptchaConfig();
+        setCaptchaEnabled(config.enabled);
+        
+        // 如果验证码启用，则获取验证码
+        if (config.enabled && !hasFetchedCaptchaRef.current) {
+          hasFetchedCaptchaRef.current = true;
+          await fetchCaptcha();
+        }
+      } catch (error) {
+        console.error('获取验证码配置失败:', error);
+        // 出错时默认启用验证码，保持向后兼容
+        setCaptchaEnabled(true);
+        if (!hasFetchedCaptchaRef.current) {
+          hasFetchedCaptchaRef.current = true;
+          await fetchCaptcha();
+        }
+      }
+    };
+
+    fetchCaptchaConfig();
+  }, []);
 
   // 获取验证码
   const fetchCaptcha = async () => {
@@ -55,15 +82,6 @@ const Login: React.FC = () => {
   }
 
 
-  // 组件挂载时获取验证码（严格模式防抖）
-  useEffect(() => {
-    console.log('useEffect 执行，hasFetchedCaptchaRef.current:', hasFetchedCaptchaRef.current);
-    if (hasFetchedCaptchaRef.current) return;
-    hasFetchedCaptchaRef.current = true;
-    console.log('开始调用 fetchCaptcha...');
-    fetchCaptcha();
-  }, []);
-
   // 添加captcha状态变化的监听
   useEffect(() => {
     console.log('captcha 状态变化:', captcha);
@@ -81,17 +99,24 @@ const Login: React.FC = () => {
     try {
       // 规范化输入，避免隐藏空格导致认证失败
       const username = (values.username || '').trim()
-      const captchaInput = (values.captcha || '').trim()
+      const captchaInput = captchaEnabled ? (values.captcha || '').trim() : ''
 
-      // 构建登录请求数据，包含验证码key
+      // 构建登录请求数据，只在启用验证码时包含验证码参数
       const loginData = {
         username,
         password: values.password, // 密码不裁剪，尊重后端真实性能
-        captcha: captchaInput,
-        captcha_key: captcha?.key,
+        ...(captchaEnabled && {
+          captcha: captchaInput,
+          captcha_key: captcha?.key,
+        }),
       }
       
-      await login(loginData.username, loginData.password, loginData.captcha, loginData.captcha_key)
+      await login(
+        loginData.username, 
+        loginData.password, 
+        captchaEnabled ? loginData.captcha : undefined, 
+        captchaEnabled ? loginData.captcha_key : undefined
+      )
       
       // 记住我：在成功登录后处理持久化
       const rememberMe = !!form.getFieldValue('rememberMe')
@@ -226,56 +251,58 @@ const Login: React.FC = () => {
                 />
               </Form.Item>
 
-              {/* 验证码 */}
-              <Form.Item
-                name="captcha"
-                rules={[{ required: true, message: '请输入验证码' }]}
-              >
-                <Row gutter={8}>
-                  <Col span={14}>
-                    <Input
-                      id="captcha-input"
-                      prefix={<SafetyOutlined />}
-                      placeholder="验证码"
-                      autoComplete="off"
-                    />
-                  </Col>
-                  <Col span={10}>
-                    {captcha ? (
-                      <Image
-                        src={captcha.image}
-                        alt="验证码"
-                        style={{
-                          width: '100%',
-                          height: '40px',
-                          cursor: 'pointer',
-                          borderRadius: '6px',
-                        }}
-                        preview={false}
-                        onClick={fetchCaptcha}
+              {/* 验证码 - 根据配置决定是否显示 */}
+              {captchaEnabled && (
+                <Form.Item
+                  name="captcha"
+                  rules={[{ required: true, message: '请输入验证码' }]}
+                >
+                  <Row gutter={8}>
+                    <Col span={14}>
+                      <Input
+                        id="captcha-input"
+                        prefix={<SafetyOutlined />}
+                        placeholder="验证码"
+                        autoComplete="off"
                       />
-                    ) : (
-                      <div
-                        style={{
-                          width: '100%',
-                          height: '40px',
-                          cursor: 'pointer',
-                          borderRadius: '6px',
-                          border: '1px dashed #d9d9d9',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#999',
-                          fontSize: '12px',
-                        }}
-                        onClick={fetchCaptcha}
-                      >
-                        {captchaRefreshing ? '加载中...' : '点击获取验证码'}
-                      </div>
-                    )}
-                  </Col>
-                </Row>
-              </Form.Item>
+                    </Col>
+                    <Col span={10}>
+                      {captcha ? (
+                        <Image
+                          src={captcha.image}
+                          alt="验证码"
+                          style={{
+                            width: '100%',
+                            height: '40px',
+                            cursor: 'pointer',
+                            borderRadius: '6px',
+                          }}
+                          preview={false}
+                          onClick={fetchCaptcha}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '40px',
+                            cursor: 'pointer',
+                            borderRadius: '6px',
+                            border: '1px dashed #d9d9d9',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#999',
+                            fontSize: '12px',
+                          }}
+                          onClick={fetchCaptcha}
+                        >
+                          {captchaRefreshing ? '加载中...' : '点击获取验证码'}
+                        </div>
+                      )}
+                    </Col>
+                  </Row>
+                </Form.Item>
+              )}
 
               <Form.Item name="rememberMe" valuePropName="checked" style={{ marginBottom: 12 }}>
                 <Checkbox>记住我</Checkbox>
@@ -312,7 +339,7 @@ const Login: React.FC = () => {
             <div style={{ textAlign: 'center', color: '#999', fontSize: '12px' }}>
               <Space direction="vertical" size={4}>
                 <div>请使用后端配置的账号登录（常见：admin / admin123）</div>
-                <div>点击验证码可刷新</div>
+                {captchaEnabled && <div>点击验证码可刷新</div>}
               </Space>
             </div>
           </Card>

@@ -73,8 +73,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	// 根据配置决定是否校验验证码
 	// 添加调试日志
-	fmt.Printf("DEBUG: EnableCaptcha = %v\n", h.cfg.Security.EnableCaptcha)
-	if h.cfg != nil && h.cfg.Security.EnableCaptcha {
+	fmt.Printf("DEBUG: AdminCaptchaEnabled = %v\n", h.cfg.Security.AdminCaptchaEnabled)
+	if h.cfg != nil && h.cfg.Security.AdminCaptchaEnabled {
 		if req.Captcha == "" || req.CaptchaKey == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "缺少验证码参数"})
 			return
@@ -377,4 +377,15 @@ func (h *AuthHandler) GetCaptchaCodeDebug(c *gin.Context) {
       "code": code,
     },
   })
+}
+
+// GetCaptchaConfig 获取验证码配置
+func (h *AuthHandler) GetCaptchaConfig(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"enabled": h.cfg.Security.AdminCaptchaEnabled,
+			"type":    h.cfg.Security.CaptchaType,
+		},
+	})
 }

@@ -12,8 +12,6 @@ CREATE TABLE IF NOT EXISTS mp_categories (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_mp_categories_sort_order ON mp_categories(sort_order);
-CREATE INDEX IF NOT EXISTS idx_mp_categories_is_active ON mp_categories(is_active);
 
 -- Plugins table
 CREATE TABLE IF NOT EXISTS mp_plugins (
@@ -45,14 +43,6 @@ CREATE TABLE IF NOT EXISTS mp_plugins (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_mp_plugins_category ON mp_plugins(category_id);
-CREATE INDEX IF NOT EXISTS idx_mp_plugins_developer ON mp_plugins(developer_id);
-CREATE INDEX IF NOT EXISTS idx_mp_plugins_status ON mp_plugins(status);
-CREATE INDEX IF NOT EXISTS idx_mp_plugins_review_status ON mp_plugins(review_status);
-CREATE INDEX IF NOT EXISTS idx_mp_plugins_is_featured ON mp_plugins(is_featured);
-CREATE INDEX IF NOT EXISTS idx_mp_plugins_rating ON mp_plugins(rating DESC);
-CREATE INDEX IF NOT EXISTS idx_mp_plugins_download_count ON mp_plugins(download_count DESC);
-CREATE INDEX IF NOT EXISTS idx_mp_plugins_created_at ON mp_plugins(created_at DESC);
 
 -- Plugin favorites table
 CREATE TABLE IF NOT EXISTS mp_favorites (

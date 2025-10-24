@@ -1,0 +1,65 @@
+{
+  "name": "microservice-example",
+  "version": "1.0.0",
+  "displayName": "微服务插件示例",
+  "description": "一个微服务类型的插件示例，展示如何创建独立运行的服务插件",
+  "author": "示例开发者",
+  "license": "MIT",
+  "type": "microservice",
+  "runtime": "docker",
+  "docker_image": "example/microservice-plugin:1.0.0",
+  "service_port": 8080,
+  "health_check_path": "/health",
+  "grpc_proto_file": "service.proto",
+  "service_endpoint": "http://localhost:8080",
+  "namespace": "microservice-example",
+  "interface_spec": {
+    "commands": [
+      {
+        "name": "process_data",
+        "description": "处理数据的微服务命令",
+        "parameters": [
+          {
+            "name": "data",
+            "type": "string",
+            "required": true,
+            "description": "要处理的数据"
+          }
+        ]
+      }
+    ],
+    "events": [
+      {
+        "name": "data_processed",
+        "description": "数据处理完成事件"
+      }
+    ],
+    "apis": [
+      {
+        "path": "/api/process",
+        "method": "POST",
+        "description": "数据处理API"
+      }
+    ]
+  },
+  "dependencies": [],
+  "runtime_config": {
+    "memory_limit": "512MB",
+    "cpu_limit": "0.5",
+    "timeout": 30000
+  },
+  "security_policy": {
+    "permissions": ["network.http_client", "storage.read"],
+    "sandbox": true,
+    "network_access": true
+  },
+  "resource_limits": {
+    "max_memory": "512MB",
+    "max_cpu": "50%",
+    "max_disk": "1GB"
+  },
+  "tags": ["微服务", "示例", "Docker"],
+  "category": "开发工具",
+  "homepage": "https://example.com/microservice-plugin",
+  "repository": "https://github.com/example/microservice-plugin"
+}

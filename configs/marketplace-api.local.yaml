@@ -1,0 +1,83 @@
+# Marketplace API service configuration - 本地开发环境
+server:
+  host: 0.0.0.0
+  port: 8082
+  cors:
+    enabled: true
+    origins:
+      - "http://localhost:3000"
+      - "http://localhost:5173"
+      - "http://localhost:8080"
+    methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+    headers:
+      - "Content-Type"
+      - "Authorization"
+      - "X-Requested-With"
+
+security:
+  jwtSecret: "laojun-local-dev-secret-key-2024"
+  jwtExpireHours: 24
+  mfaEnabled: false
+  rateLimitEnabled: false
+  marketplaceCaptchaEnabled: false
+  captchaType: "image"
+
+logging:
+  level: debug
+  format: text
+  output: both
+  file: 
+    path: "./logs/marketplace-api.log"
+    maxSize: 100MB
+    maxBackups: 5
+    maxAge: 30
+
+database:
+  postgres:
+    host: localhost
+    port: 5432
+    user: laojun
+    password: "laojun123"
+    dbname: laojun_local
+    sslmode: disable
+    maxOpenConns: 25
+    maxIdleConns: 5
+    connMaxLifetime: 300s
+  redis:
+    host: localhost
+    port: 6379
+    db: 0
+    password: "redis123"
+    poolSize: 10
+    minIdleConns: 5
+
+storage:
+  type: local
+  local:
+    basePath: "./uploads/marketplace"
+    maxFileSize: 50MB
+    allowedTypes:
+      - "image/jpeg"
+      - "image/png"
+      - "image/gif"
+      - "application/zip"
+      - "application/tar"
+      - "application/gzip"
+
+cache:
+  driver: redis
+  ttl: 7200
+  prefix: "marketplace:local:"
+
+marketplace:
+  enablePluginUpload: true
+  maxPluginSize: 50MB
+  allowedPluginTypes:
+    - "zip"
+    - "tar.gz"
+  pluginStoragePath: "./uploads/plugins"

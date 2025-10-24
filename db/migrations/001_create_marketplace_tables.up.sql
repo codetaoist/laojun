@@ -23,8 +23,6 @@ CREATE TABLE IF NOT EXISTS mp_users (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   last_login_at TIMESTAMPTZ
 );
-CREATE INDEX IF NOT EXISTS idx_mp_users_username ON mp_users(username);
-CREATE INDEX IF NOT EXISTS idx_mp_users_email ON mp_users(email);
 
 -- Forum categories
 CREATE TABLE IF NOT EXISTS mp_forum_categories (
@@ -53,8 +51,6 @@ CREATE TABLE IF NOT EXISTS mp_forum_posts (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_mp_forum_posts_category ON mp_forum_posts(category_id);
-CREATE INDEX IF NOT EXISTS idx_mp_forum_posts_created_at ON mp_forum_posts(created_at DESC);
 
 -- Forum replies
 CREATE TABLE IF NOT EXISTS mp_forum_replies (
@@ -66,7 +62,6 @@ CREATE TABLE IF NOT EXISTS mp_forum_replies (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_mp_forum_replies_post ON mp_forum_replies(post_id);
 
 -- Blog categories
 CREATE TABLE IF NOT EXISTS mp_blog_categories (

@@ -1,7 +1,7 @@
 # Config Center Configuration
 server:
   host: 0.0.0.0
-  port: 8090
+  port: 8093
   readTimeout: 30s
   writeTimeout: 30s
 
@@ -13,14 +13,14 @@ storage:
   redis:
     host: localhost
     port: 6379
-    password: ""
+    password: "redis123"
     db: 1
   database:
     host: localhost
     port: 5432
     user: laojun
-    password: "change-me"
-    dbname: laojun_config
+    password: "laojun123"
+    dbname: laojun_dev
     sslmode: disable
 
 security:

@@ -103,7 +103,7 @@ COPY configs/ /app/configs/
 COPY db/ /app/db/
 
 # 复制 Nginx 配置
-COPY deploy/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY deploy/nginx/nginx.prod.conf /etc/nginx/nginx.conf
 COPY deploy/nginx/conf.d/ /etc/nginx/conf.d/
 
 # 复制 Supervisor 配置

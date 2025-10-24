@@ -1,0 +1,24 @@
+# 二进制文件目录
+
+此目录用于存放编译后的二进制文件。
+
+## 当前包含的可执行文件
+- admin-api.exe - 管理后台API服务
+- admin-api-test.exe - 管理后台API测试版本
+- config-center.exe - 配置中心服务
+- marketplace-api.exe - 市场API服务
+- migrate.exe - 数据库迁移工具
+- debug-config.exe - 配置调试工具
+- test-swagger.exe - Swagger测试工具
+- test.exe - 通用测试工具
+
+## 构建命令示例
+```bash
+# 构建主程序
+go build -o bin/laojun cmd/main.go
+
+# 构建工具
+go build -o bin/migrate tools/migrate/main.go
+```
+
+注意：二进制文件不会被提交到版本控制系统。

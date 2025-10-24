@@ -45,7 +45,7 @@ func (s *UserService) GetUsers(page, size int, search string) (*models.UserListR
 
 	// 查询用户列表
 	query := fmt.Sprintf(`
-		SELECT id, username, email, avatar, bio, is_active, created_at, updated_at, last_login_at
+		SELECT id, username, email, avatar_url, is_active, created_at, updated_at, last_login_at
 		FROM ua_admin %s
 		ORDER BY created_at DESC
 		LIMIT $%d OFFSET $%d
@@ -63,7 +63,7 @@ func (s *UserService) GetUsers(page, size int, search string) (*models.UserListR
 	for rows.Next() {
 		var user models.UserResponse
 		err := rows.Scan(
-			&user.ID, &user.Username, &user.Email, &user.Avatar, &user.Bio,
+			&user.ID, &user.Username, &user.Email, &user.Avatar,
 			&user.IsActive, &user.CreatedAt, &user.UpdatedAt, &user.LastLoginAt,
 		)
 		if err != nil {
@@ -83,13 +83,13 @@ func (s *UserService) GetUsers(page, size int, search string) (*models.UserListR
 // GetUserByID 根据ID获取用户
 func (s *UserService) GetUserByID(id uuid.UUID) (*models.UserResponse, error) {
 	query := `
-		SELECT id, username, email, avatar, bio, is_active, created_at, updated_at, last_login_at
+		SELECT id, username, email, avatar_url, is_active, created_at, updated_at, last_login_at
 		FROM ua_admin WHERE id = $1
 	`
 
 	var user models.UserResponse
 	err := s.db.QueryRow(query, id).Scan(
-		&user.ID, &user.Username, &user.Email, &user.Avatar, &user.Bio,
+		&user.ID, &user.Username, &user.Email, &user.Avatar,
 		&user.IsActive, &user.CreatedAt, &user.UpdatedAt, &user.LastLoginAt,
 	)
 	if err != nil {
@@ -131,19 +131,16 @@ func (s *UserService) CreateUser(req *models.UserCreateRequest) (*models.UserRes
 	now := time.Now()
 
 	query := `
-		INSERT INTO ua_admin (id, username, email, password_hash, avatar, bio, is_active, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO ua_admin (id, username, email, password_hash, avatar_url, is_active, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 
-	var avatar, bio *string
+	var avatar *string
 	if req.Avatar != "" {
 		avatar = &req.Avatar
 	}
-	if req.Bio != "" {
-		bio = &req.Bio
-	}
 
-	_, err = s.db.Exec(query, id, req.Username, req.Email, string(hashedPassword), avatar, bio, true, now, now)
+	_, err = s.db.Exec(query, id, req.Username, req.Email, string(hashedPassword), avatar, true, now, now)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
@@ -179,12 +176,6 @@ func (s *UserService) UpdateUser(id uuid.UUID, req *models.UserUpdateRequest) (*
 	if req.Avatar != "" {
 		setParts = append(setParts, fmt.Sprintf("avatar = $%d", argIndex))
 		args = append(args, req.Avatar)
-		argIndex++
-	}
-
-	if req.Bio != "" {
-		setParts = append(setParts, fmt.Sprintf("bio = $%d", argIndex))
-		args = append(args, req.Bio)
 		argIndex++
 	}
 

@@ -173,7 +173,7 @@ func (s *ReviewService) GetReview(reviewID uuid.UUID) (*Review, error) {
 	query := `
 		SELECT 
 			r.id, r.user_id, r.plugin_id, r.rating, r.comment, r.created_at, r.updated_at,
-			u.username, u.email, u.bio,
+			u.username, u.email,
 			p.name as plugin_name
 		FROM mp_reviews r
 		JOIN mp_users u ON r.user_id = u.id
@@ -186,7 +186,7 @@ func (s *ReviewService) GetReview(reviewID uuid.UUID) (*Review, error) {
 	err := s.db.QueryRow(query, reviewID).Scan(
 		&review.ID, &review.UserID, &review.PluginID, &review.Rating,
 		&review.Comment, &review.CreatedAt, &review.UpdatedAt,
-		&user.Username, &user.Email, &user.Bio, &pluginName,
+		&user.Username, &user.Email, &pluginName,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -216,7 +216,7 @@ func (s *ReviewService) GetPluginReviewsList(pluginID uuid.UUID, page, limit int
 	query := `
 		SELECT 
 			r.id, r.user_id, r.plugin_id, r.rating, r.comment, r.created_at, r.updated_at,
-			u.username, u.email, u.bio
+			u.username, u.email
 		FROM mp_reviews r
 		JOIN mp_users u ON r.user_id = u.id
 		WHERE r.plugin_id = $1
@@ -237,7 +237,7 @@ func (s *ReviewService) GetPluginReviewsList(pluginID uuid.UUID, page, limit int
 		err := rows.Scan(
 			&review.ID, &review.UserID, &review.PluginID, &review.Rating,
 			&review.Comment, &review.CreatedAt, &review.UpdatedAt,
-			&user.Username, &user.Email, &user.Bio,
+			&user.Username, &user.Email,
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to scan review: %w", err)

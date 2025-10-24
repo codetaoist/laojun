@@ -1,11 +1,11 @@
 # 插件市场API服务 Dockerfile
 # 构建阶段
-FROM golang:1.21 AS builder
+FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
 # 安装必要的包
-RUN apt-get update && apt-get install -y git ca-certificates tzdata
+RUN apk update && apk add --no-cache git ca-certificates tzdata
 
 # 复制 go mod 文件
 COPY go.mod go.work go.work.sum ./
@@ -34,14 +34,17 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -o marketplace-api ./cmd/marketplace-api
 
 # 运行阶段
-FROM ubuntu:22.04
+FROM redis:7-alpine
 
 # 安装运行时依赖
-RUN apt-get update && apt-get install -y ca-certificates curl tzdata && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache \
+    ca-certificates \
+    tzdata \
+    curl
 
 # 创建非 root 用户
-RUN groupadd --gid 1001 appgroup && \
-    useradd --uid 1001 --gid appgroup --shell /bin/bash --create-home appuser
+RUN addgroup -g 1001 appgroup && \
+    adduser -u 1001 -G appgroup -s /bin/sh -D appuser
 
 # 创建应用目录
 RUN mkdir -p /app/bin /app/configs /app/logs /app/uploads

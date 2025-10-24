@@ -126,6 +126,9 @@ func NewServer(cfg *config.Config) (*Server, error) {
 			authRoutes.POST("/register", authHandler.Register)
 			authRoutes.POST("/login", authHandler.Login)
 			authRoutes.POST("/refresh", authHandler.RefreshToken)
+			
+			// 验证码配置接口（公开访问）
+			authRoutes.GET("/captcha/config", authHandler.GetCaptchaConfig)
 
 			// 验证码端点（按配置启用）
 			if cfg.Security.EnableCaptcha {

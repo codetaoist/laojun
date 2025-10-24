@@ -1,0 +1,1 @@
+import{s as a,v as t,ao as i,B as s}from"./index-rvbp6ndQ.js";const o=()=>{const e=a();return t.jsx("div",{style:{padding:"50px 20px",textAlign:"center"},children:t.jsx(i,{status:"404",title:"页面不存在",subTitle:"抱歉，您访问的页面不存在。",extra:[t.jsx(s,{type:"primary",onClick:()=>e("/"),children:"返回首页"},"home"),t.jsx(s,{onClick:()=>e(-1),children:"返回上页"},"back")]})})};export{o as default};

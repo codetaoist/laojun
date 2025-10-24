@@ -146,6 +146,7 @@ func (s *PluginReviewService) GetReviewQueue(params models.ReviewQueueParams) ([
 		var plugin models.Plugin
 		var category models.Category
 		var screenshotsJSON, tagsJSON sql.NullString
+		var autoReviewResult, reviewNotes, rejectionReason sql.NullString
 
 		err := rows.Scan(
 			&plugin.ID, &plugin.Name, &plugin.Description, &plugin.Author,
@@ -155,8 +156,8 @@ func (s *PluginReviewService) GetReviewQueue(params models.ReviewQueueParams) ([
 			&plugin.CreatedAt, &plugin.UpdatedAt,
 			// 审核相关字段
 			&plugin.ReviewStatus, &plugin.ReviewPriority, &plugin.AutoReviewScore,
-			&plugin.AutoReviewResult, &plugin.ReviewNotes, &plugin.ReviewedAt,
-			&plugin.ReviewerID, &plugin.SubmittedForReviewAt, &plugin.RejectionReason,
+			&autoReviewResult, &reviewNotes, &plugin.ReviewedAt,
+			&plugin.ReviewerID, &plugin.SubmittedForReviewAt, &rejectionReason,
 			&plugin.AppealCount, &plugin.LastAppealAt,
 			// 分类信息
 			&category.ID, &category.Name, &category.Description,
@@ -164,6 +165,17 @@ func (s *PluginReviewService) GetReviewQueue(params models.ReviewQueueParams) ([
 		)
 		if err != nil {
 			return nil, sharedmodels.PaginationMeta{}, fmt.Errorf("failed to scan plugin: %w", err)
+		}
+
+		// 处理可能为NULL的字符串字段
+		if autoReviewResult.Valid {
+			plugin.AutoReviewResult = &autoReviewResult.String
+		}
+		if reviewNotes.Valid {
+			plugin.ReviewNotes = &reviewNotes.String
+		}
+		if rejectionReason.Valid {
+			plugin.RejectionReason = &rejectionReason.String
 		}
 
 		// 解析JSON字段

@@ -17,7 +17,6 @@ export default defineConfig({
       '@/hooks': path.resolve(__dirname, './src/hooks'),
     },
   },
-  base: '/admin/',
   server: {
     port: 3000,
     host: true,

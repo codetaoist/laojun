@@ -131,7 +131,6 @@ func (s *AuthService) Register(req *RegisterRequest) (*MarketplaceUser, error) {
 			Username:    req.Username,
 			Email:       req.Email,
 			Avatar:      nil,
-			Bio:         nil,
 			IsActive:    true,
 			CreatedAt:   now,
 			UpdatedAt:   now,
@@ -148,7 +147,7 @@ func (s *AuthService) Register(req *RegisterRequest) (*MarketplaceUser, error) {
 func (s *AuthService) Login(req *LoginRequest) (*MarketplaceUser, error) {
 	// 根据用户名或邮箱查找用户
 	query := `
-		SELECT id, username, email, password_hash, full_name, avatar, 
+		SELECT id, username, email, password_hash, full_name, avatar_url, 
 			   is_active, created_at, updated_at, last_login_at
 		FROM ua_admin 
 		WHERE (username = $1 OR email = $1) AND is_active = true`
@@ -219,7 +218,7 @@ func (s *AuthService) Login(req *LoginRequest) (*MarketplaceUser, error) {
 // GetUserByID 根据ID获取用户
 func (s *AuthService) GetUserByID(userID uuid.UUID) (*MarketplaceUser, error) {
 	query := `
-		SELECT id, username, email, full_name, avatar, 
+		SELECT id, username, email, full_name, avatar_url, 
 			   is_active, created_at, updated_at, last_login_at
 		FROM ua_admin 
 		WHERE id = $1 AND is_active = true`

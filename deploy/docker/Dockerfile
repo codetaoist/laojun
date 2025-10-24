@@ -8,8 +8,20 @@ WORKDIR /app
 # 安装必要的包
 RUN apk add --no-cache git ca-certificates tzdata
 
-# 复制 go mod 文件
+# 复制 go 工作区文件
+COPY go.work go.work.sum ./
 COPY go.mod go.sum ./
+
+# 复制子模块的 go.mod 文件
+COPY pkg/plugins/go.mod ./pkg/plugins/
+COPY pkg/shared/go.mod ./pkg/shared/
+COPY tools/debug/go.mod ./tools/debug/
+COPY tools/plugin-cli/go.mod ./tools/plugin-cli/
+COPY tools/swagger/go.mod ./tools/swagger/
+
+# 配置 Go 工具链和代理
+ENV GOTOOLCHAIN=auto
+ENV GOPROXY=https://goproxy.cn,direct
 
 # 下载依赖
 RUN go mod download

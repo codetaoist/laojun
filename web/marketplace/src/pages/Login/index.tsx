@@ -3,6 +3,7 @@ import { Form, Input, Button, Card, Tabs, Checkbox, Divider, Space, Typography, 
 import { UserOutlined, LockOutlined, MailOutlined, EyeInvisibleOutlined, EyeTwoTone, SafetyOutlined } from '@ant-design/icons';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore, LoginCredentials, RegisterData } from '@/stores/auth';
+import { authService } from '@/services/auth';
 import './index.css';
 import { request } from '@/services/api';
 
@@ -19,6 +20,7 @@ const Login: React.FC = () => {
   const { login, register, loading, error, isAuthenticated, clearError } = useAuthStore();
   const [captcha, setCaptcha] = useState<{ image: string; key: string } | null>(null);
   const [captchaRefreshing, setCaptchaRefreshing] = useState(false);
+  const [captchaEnabled, setCaptchaEnabled] = useState(true); // 默认启用验证码
 
   // 根据URL参数设置默认标签页
   useEffect(() => {
@@ -37,9 +39,26 @@ const Login: React.FC = () => {
     }
   }, [isAuthenticated, navigate, location]);
 
-  // 首次加载验证码
+  // 获取验证码配置
   useEffect(() => {
-    fetchCaptcha();
+    const loadCaptchaConfig = async () => {
+      try {
+        const config = await authService.getCaptchaConfig();
+        setCaptchaEnabled(config.enabled);
+        
+        // 如果启用验证码，则获取验证码
+        if (config.enabled) {
+          fetchCaptcha();
+        }
+      } catch (error) {
+        console.error('获取验证码配置失败:', error);
+        // 默认启用验证码
+        setCaptchaEnabled(true);
+        fetchCaptcha();
+      }
+    };
+
+    loadCaptchaConfig();
   }, []);
 
   const fetchCaptcha = async () => {
@@ -67,7 +86,13 @@ const Login: React.FC = () => {
   }, [error, clearError]);
 
   const handleLogin = async (values: LoginCredentials) => {
-    const payload: LoginCredentials = { ...values, captcha_key: captcha?.key };
+    const payload: LoginCredentials = {
+      ...values,
+      ...(captchaEnabled && {
+        captcha: values.captcha,
+        captcha_key: captcha?.key,
+      }),
+    };
     const success = await login(payload);
     if (success) {
       const from = (location.state as any)?.from?.pathname || '/';
@@ -151,44 +176,46 @@ const Login: React.FC = () => {
                   />
                 </Form.Item>
 
-                <Form.Item name="captcha" rules={[{ required: true, message: '请输入验证码' }]}>
-                  <Row gutter={8} align="middle">
-                    <Col span={14}>
-                      <Input
-                        prefix={<SafetyOutlined />}
-                        placeholder="请输入图片中的验证码"
-                      />
-                    </Col>
-                    <Col span={10}>
-                      <div className="captcha-container">
-                        <div 
-                          className="captcha-image-wrapper"
-                          onClick={fetchCaptcha}
-                          title="点击刷新验证码"
-                        >
-                          <Image
-                            src={captcha?.image}
-                            alt="验证码"
-                            width="100%"
-                            height={40}
-                            style={{ 
-                              borderRadius: 4, 
-                              objectFit: 'contain',
-                              border: '1px solid #d9d9d9',
-                              backgroundColor: '#fafafa'
-                            }}
-                            preview={false}
-                          />
-                          {captchaRefreshing && (
-                            <div className="captcha-loading-overlay">
-                              <div className="captcha-loading-spinner" />
-                            </div>
-                          )}
+                {captchaEnabled && (
+                  <Form.Item name="captcha" rules={[{ required: true, message: '请输入验证码' }]}>
+                    <Row gutter={8} align="middle">
+                      <Col span={14}>
+                        <Input
+                          prefix={<SafetyOutlined />}
+                          placeholder="请输入图片中的验证码"
+                        />
+                      </Col>
+                      <Col span={10}>
+                        <div className="captcha-container">
+                          <div 
+                            className="captcha-image-wrapper"
+                            onClick={fetchCaptcha}
+                            title="点击刷新验证码"
+                          >
+                            <Image
+                              src={captcha?.image}
+                              alt="验证码"
+                              width="100%"
+                              height={40}
+                              style={{ 
+                                borderRadius: 4, 
+                                objectFit: 'contain',
+                                border: '1px solid #d9d9d9',
+                                backgroundColor: '#fafafa'
+                              }}
+                              preview={false}
+                            />
+                            {captchaRefreshing && (
+                              <div className="captcha-loading-overlay">
+                                <div className="captcha-loading-spinner" />
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </Col>
-                  </Row>
-                </Form.Item>
+                      </Col>
+                    </Row>
+                  </Form.Item>
+                )}
 
                 <Form.Item>
                   <Checkbox defaultChecked>记住我</Checkbox>

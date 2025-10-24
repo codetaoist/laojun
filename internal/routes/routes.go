@@ -2,6 +2,7 @@ package routes
 
 import (
 	"database/sql"
+	"fmt"
 
 	sharedconfig "github.com/codetaoist/laojun/pkg/shared/config"
 	"github.com/codetaoist/laojun/internal/handlers"
@@ -85,6 +86,9 @@ func SetupRoutes(
 	// 公开路由
 	public := api.Group("/")
 	{
+		// 验证码配置接口（公开访问）
+		public.GET("/auth/captcha/config", authHandler.GetCaptchaConfig)
+		
 		// 验证码端点按开关启用
 		if cfg.Security.EnableCaptcha {
 			public.GET("/auth/captcha", authHandler.GetCaptcha)
@@ -662,6 +666,15 @@ func SetupRoutes(
 	
 	// 设置管理员插件管理Web路由
 	SetupAdminPluginWebRoutes(r, adminPluginHandler, adminAuthService)
+
+	// Swagger API 文档路由
+	fmt.Println("About to register Swagger routes...")
+	swaggerHandler := handlers.NewSwaggerHandler("/app/docs/api/swagger")
+	r.GET("/swagger", swaggerHandler.GetSwaggerUI)
+	r.GET("/swagger/doc.json", swaggerHandler.GetSwaggerJSON)
+	
+	// 添加调试日志
+	fmt.Println("Swagger routes registered: /swagger and /swagger/doc.json")
 
 	return r
 }

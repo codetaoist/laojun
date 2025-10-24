@@ -117,9 +117,35 @@ build-migrate-local:
 	@echo "构建 migrate（本地）..."
 	@go build -o build/migrate.exe ./cmd/migrate
 
+.PHONY: build-db-complete-migrate-local
+build-db-complete-migrate-local:
+	@echo "构建 db-complete-migrate（本地）..."
+	@go build -o build/db-complete-migrate.exe ./cmd/db-complete-migrate
+
 .PHONY: build-local
-build-local: build-admin-api-local build-marketplace-api-local build-config-center-local build-migrate-local
+build-local: build-admin-api-local build-marketplace-api-local build-config-center-local build-migrate-local build-db-complete-migrate-local
 	@echo "本地构建完成"
+
+# 数据库迁移相关命令
+.PHONY: migrate-complete-up
+migrate-complete-up: ## 执行完整数据库迁移
+	@echo "执行完整数据库迁移..."
+	@go run cmd/db-complete-migrate/main.go -action=up
+
+.PHONY: migrate-complete-status
+migrate-complete-status: ## 查看完整迁移状态
+	@echo "查看完整迁移状态..."
+	@go run cmd/db-complete-migrate/main.go -action=status
+
+.PHONY: migrate-complete-reset
+migrate-complete-reset: ## 重置数据库（危险操作）
+	@echo "重置数据库..."
+	@go run cmd/db-complete-migrate/main.go -action=reset
+
+.PHONY: migrate-generate
+migrate-generate: ## 生成完整迁移文件
+	@echo "生成完整迁移文件..."
+	@go run scripts/generate_complete_migration.go
 
 # 清理
 .PHONY: clean

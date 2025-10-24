@@ -1,12 +1,11 @@
-version: '3.8'
-
-# 新的Docker部署架构
+# 太上老君系统 Docker 部署配置
 # 特点：
-# 1. 服务分离，每个服务独立容器
+# 1. 微服务架构，每个服务独立容器
 # 2. 插件市场为默认首页（80端口）
-# 3. 管理后台通过8080端口访问
+# 3. 管理后台通过8888端口访问
 # 4. 统一的环境变量管理
-# 5. 简化的网络配置
+# 5. 完整的健康检查和依赖管理
+# 6. 数据持久化和日志管理
 
 services:
   # PostgreSQL 数据库
@@ -18,45 +17,73 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-laojun}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-laojun123}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      # 性能优化配置
+      POSTGRES_SHARED_BUFFERS: "256MB"
+      POSTGRES_EFFECTIVE_CACHE_SIZE: "1GB"
+      POSTGRES_MAINTENANCE_WORK_MEM: "64MB"
+      POSTGRES_CHECKPOINT_COMPLETION_TARGET: "0.9"
+      POSTGRES_WAL_BUFFERS: "16MB"
+      POSTGRES_DEFAULT_STATISTICS_TARGET: "100"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ../../db/migrations:/docker-entrypoint-initdb.d:ro
+      - ./init-db:/docker-entrypoint-initdb.d
+      - ../../db/migrations:/docker-entrypoint-initdb.d/migrations:ro
+      - ../../logs/postgres:/var/log/postgresql
     networks:
       - laojun-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-laojun} -d ${POSTGRES_DB:-laojun}"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1G
+          cpus: '1.0'
         reservations:
-          memory: 256M
+          memory: 512M
+          cpus: '0.5'
 
   # Redis 缓存
   redis:
     image: redis:7-alpine
     container_name: laojun-redis
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis123}
+    command: >
+      redis-server 
+      --appendonly yes 
+      --requirepass ${REDIS_PASSWORD:-redis123}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 300
+      --timeout 0
+      --tcp-backlog 511
+      --save 900 1
+      --save 300 10
+      --save 60 10000
     volumes:
       - redis_data:/data
+      - ../../configs/redis-test.conf:/usr/local/etc/redis/redis.conf:ro
+      - ../../logs/redis:/var/log/redis
     networks:
       - laojun-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis123}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 512M
+          cpus: '0.5'
         reservations:
-          memory: 128M
+          memory: 256M
+          cpus: '0.25'
 
   # 配置中心服务
   config-center:
@@ -89,7 +116,9 @@ services:
       - JWT_EXPIRE_HOURS=${JWT_EXPIRE_HOURS:-24}
       
       # 安全配置
-      - SECURITY_ENABLE_CAPTCHA=${SECURITY_ENABLE_CAPTCHA:-false}
+      - SECURITY_ENABLE_CAPTCHA=true
+      - ADMIN_CAPTCHA_ENABLED=${ADMIN_CAPTCHA_ENABLED:-true}
+      - CAPTCHA_TYPE=${CAPTCHA_TYPE:-image}
       - SECURITY_CAPTCHA_TTL=${SECURITY_CAPTCHA_TTL:-2m}
       
       # 运行模式
@@ -145,7 +174,7 @@ services:
       - JWT_EXPIRE_HOURS=${JWT_EXPIRE_HOURS:-24}
       
       # 安全配置
-      - SECURITY_ENABLE_CAPTCHA=${SECURITY_ENABLE_CAPTCHA:-false}
+      - SECURITY_ENABLE_CAPTCHA=true
       - SECURITY_CAPTCHA_TTL=${SECURITY_CAPTCHA_TTL:-2m}
       
       # CORS 配置
@@ -207,8 +236,10 @@ services:
       - JWT_EXPIRE_HOURS=${JWT_EXPIRE_HOURS:-24}
       
       # 安全配置
-      - SECURITY_ENABLE_CAPTCHA=${SECURITY_ENABLE_CAPTCHA:-false}
-      - SECURITY_CAPTCHA_TTL=${SECURITY_CAPTCHA_TTL:-2m}
+      - SECURITY_ENABLE_CAPTCHA=true
+      - MARKETPLACE_CAPTCHA_ENABLED=true
+      - CAPTCHA_TYPE=image
+      - SECURITY_CAPTCHA_TTL=2m
       
       # CORS 配置
       - CORS_ALLOW_ORIGINS=${CORS_ALLOW_ORIGINS:-*}
@@ -242,7 +273,7 @@ services:
   nginx:
     build:
       context: ../..
-      dockerfile: deploy/docker/Dockerfile.nginx
+      dockerfile: deploy/docker/Dockerfile.nginx.local
     container_name: laojun-nginx
     ports:
       - "80:80"      # 插件市场（默认首页）
