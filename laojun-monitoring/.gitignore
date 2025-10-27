@@ -1,0 +1,49 @@
+# Go 编译产物
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+monitoring.exe
+bin/
+build/
+target/
+dist/
+
+# Go 模块缓存
+go.sum
+vendor/
+
+# 监控数据
+metrics-data/
+prometheus-data/
+grafana-data/
+alertmanager-data/
+
+# 配置文件（包含敏感信息）
+config.local.yaml
+config.prod.yaml
+.env.local
+.env.production
+
+# IDE 文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# 测试覆盖率
+coverage.out
+coverage.html
