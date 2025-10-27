@@ -1,0 +1,210 @@
+# AlertManager 配置文件
+global:
+  # SMTP 配置
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'alertmanager@laojun-monitoring.com'
+  smtp_auth_username: 'alertmanager@laojun-monitoring.com'
+  smtp_auth_password: 'your-email-password'
+  
+  # 默认模板
+  smtp_hello: 'localhost'
+  smtp_require_tls: true
+
+# 模板配置
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# 路由配置
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'web.hook'
+  
+  routes:
+    # 严重告警立即发送
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 0s
+      repeat_interval: 5m
+    
+    # 警告级别告警
+    - match:
+        severity: warning
+      receiver: 'warning-alerts'
+      group_wait: 30s
+      repeat_interval: 30m
+    
+    # 信息级别告警
+    - match:
+        severity: info
+      receiver: 'info-alerts'
+      group_wait: 5m
+      repeat_interval: 2h
+    
+    # 系统相关告警
+    - match_re:
+        service: ^(cpu|memory|disk|network)$
+      receiver: 'system-alerts'
+    
+    # 应用相关告警
+    - match_re:
+        service: ^(api|database|cache)$
+      receiver: 'application-alerts'
+
+# 抑制规则
+inhibit_rules:
+  # 如果有严重告警，抑制相同实例的警告告警
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
+  
+  # 如果节点宕机，抑制该节点的所有其他告警
+  - source_match:
+      alertname: 'InstanceDown'
+    target_match_re:
+      severity: '.*'
+    equal: ['instance']
+
+# 接收器配置
+receivers:
+  # 默认 Webhook
+  - name: 'web.hook'
+    webhook_configs:
+      - url: 'http://laojun-monitoring:8080/api/v1/alerts/webhook'
+        send_resolved: true
+        http_config:
+          basic_auth:
+            username: 'webhook'
+            password: 'webhook-secret'
+        title: '太上老君监控告警'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+
+  # 严重告警
+  - name: 'critical-alerts'
+    email_configs:
+      - to: 'admin@laojun-monitoring.com'
+        subject: '[CRITICAL] 太上老君监控 - {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          告警名称: {{ .Labels.alertname }}
+          严重程度: {{ .Labels.severity }}
+          实例: {{ .Labels.instance }}
+          描述: {{ .Annotations.description }}
+          时间: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+        headers:
+          Subject: '[CRITICAL] 太上老君监控告警'
+    
+    webhook_configs:
+      - url: 'http://laojun-monitoring:8080/api/v1/alerts/critical'
+        send_resolved: true
+    
+    # 钉钉通知
+    webhook_configs:
+      - url: 'https://oapi.dingtalk.com/robot/send?access_token=YOUR_DINGTALK_TOKEN'
+        send_resolved: true
+        http_config:
+          headers:
+            Content-Type: 'application/json'
+        title: '严重告警'
+        text: |
+          {
+            "msgtype": "text",
+            "text": {
+              "content": "太上老君监控严重告警\n{{ range .Alerts }}告警: {{ .Labels.alertname }}\n实例: {{ .Labels.instance }}\n描述: {{ .Annotations.description }}{{ end }}"
+            }
+          }
+
+  # 警告告警
+  - name: 'warning-alerts'
+    email_configs:
+      - to: 'ops@laojun-monitoring.com'
+        subject: '[WARNING] 太上老君监控 - {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          告警名称: {{ .Labels.alertname }}
+          严重程度: {{ .Labels.severity }}
+          实例: {{ .Labels.instance }}
+          描述: {{ .Annotations.description }}
+          时间: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+    
+    webhook_configs:
+      - url: 'http://laojun-monitoring:8080/api/v1/alerts/warning'
+        send_resolved: true
+
+  # 信息告警
+  - name: 'info-alerts'
+    webhook_configs:
+      - url: 'http://laojun-monitoring:8080/api/v1/alerts/info'
+        send_resolved: true
+
+  # 系统告警
+  - name: 'system-alerts'
+    email_configs:
+      - to: 'system-admin@laojun-monitoring.com'
+        subject: '[SYSTEM] 太上老君监控 - {{ .GroupLabels.alertname }}'
+        body: |
+          系统告警详情:
+          {{ range .Alerts }}
+          告警名称: {{ .Labels.alertname }}
+          服务: {{ .Labels.service }}
+          实例: {{ .Labels.instance }}
+          当前值: {{ .Annotations.value }}
+          阈值: {{ .Annotations.threshold }}
+          描述: {{ .Annotations.description }}
+          时间: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+
+  # 应用告警
+  - name: 'application-alerts'
+    email_configs:
+      - to: 'app-admin@laojun-monitoring.com'
+        subject: '[APPLICATION] 太上老君监控 - {{ .GroupLabels.alertname }}'
+        body: |
+          应用告警详情:
+          {{ range .Alerts }}
+          告警名称: {{ .Labels.alertname }}
+          应用: {{ .Labels.service }}
+          实例: {{ .Labels.instance }}
+          描述: {{ .Annotations.description }}
+          时间: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+
+  # Slack 通知（可选）
+  - name: 'slack-alerts'
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#monitoring'
+        username: 'AlertManager'
+        icon_emoji: ':warning:'
+        title: '太上老君监控告警'
+        text: |
+          {{ range .Alerts }}
+          *告警:* {{ .Labels.alertname }}
+          *严重程度:* {{ .Labels.severity }}
+          *实例:* {{ .Labels.instance }}
+          *描述:* {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true
+
+  # 企业微信通知（可选）
+  - name: 'wechat-alerts'
+    wechat_configs:
+      - corp_id: 'YOUR_CORP_ID'
+        agent_id: 'YOUR_AGENT_ID'
+        api_secret: 'YOUR_API_SECRET'
+        to_user: '@all'
+        message: |
+          太上老君监控告警
+          {{ range .Alerts }}
+          告警: {{ .Labels.alertname }}
+          实例: {{ .Labels.instance }}
+          描述: {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true

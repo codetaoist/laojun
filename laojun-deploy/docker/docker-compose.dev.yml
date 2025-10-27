@@ -1,0 +1,127 @@
+version: '3.8'
+
+# 太上老君系统 - 开发环境 Docker Compose 配置
+# 使用方法: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+services:
+  # PostgreSQL 开发环境配置
+  postgres:
+    environment:
+      # 开发环境调试配置
+      POSTGRES_LOG_STATEMENT: "all"
+      POSTGRES_LOG_MIN_DURATION_STATEMENT: "0"
+      POSTGRES_LOG_CONNECTIONS: "on"
+      POSTGRES_LOG_DISCONNECTIONS: "on"
+    ports:
+      - "5432:5432"  # 暴露端口供本地连接
+    volumes:
+      # 添加开发环境特定的初始化脚本
+      - ../../db/dev-data:/docker-entrypoint-initdb.d/dev:ro
+
+  # Redis 开发环境配置
+  redis:
+    ports:
+      - "6379:6379"  # 暴露端口供本地连接
+    command: >
+      redis-server 
+      --appendonly yes 
+      --requirepass ${REDIS_PASSWORD:-redis123}
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --loglevel debug
+
+  # 配置中心开发环境配置
+  config-center:
+    environment:
+      - APP_ENV=development
+      - APP_DEBUG=true
+      - LOG_LEVEL=debug
+      - GIN_MODE=debug
+    volumes:
+      # 开发环境代码热重载
+      - ../../:/app/src:ro
+    ports:
+      - "8081:8081"
+
+  # 管理API开发环境配置
+  admin-api:
+    environment:
+      - APP_ENV=development
+      - APP_DEBUG=true
+      - LOG_LEVEL=debug
+      - GIN_MODE=debug
+    volumes:
+      # 开发环境代码热重载
+      - ../../:/app/src:ro
+    ports:
+      - "8080:8080"
+
+  # 插件市场API开发环境配置
+  marketplace-api:
+    environment:
+      - APP_ENV=development
+      - APP_DEBUG=true
+      - LOG_LEVEL=debug
+      - GIN_MODE=debug
+    volumes:
+      # 开发环境代码热重载
+      - ../../:/app/src:ro
+    ports:
+      - "8082:8082"
+
+  # Nginx 开发环境配置
+  nginx:
+    volumes:
+      # 开发环境前端代码热重载
+      - ../../web:/usr/share/nginx/html:ro
+    ports:
+      - "80:80"
+      - "8888:8888"
+
+  # 开发工具容器
+  dev-tools:
+    image: golang:1.21-alpine
+    container_name: laojun-dev-tools
+    working_dir: /app
+    volumes:
+      - ../../:/app
+      - go_mod_cache:/go/pkg/mod
+    networks:
+      - laojun-network
+    command: tail -f /dev/null  # 保持容器运行
+    environment:
+      - GOPROXY=https://goproxy.cn,direct
+      - GOTOOLCHAIN=auto
+    profiles:
+      - dev-tools
+
+  # 数据库管理工具 (可选)
+  adminer:
+    image: adminer:4.8.1
+    container_name: laojun-adminer
+    ports:
+      - "8090:8080"
+    networks:
+      - laojun-network
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    profiles:
+      - db-tools
+
+  # Redis 管理工具 (可选)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: laojun-redis-commander
+    ports:
+      - "8091:8081"
+    networks:
+      - laojun-network
+    environment:
+      REDIS_HOSTS: "local:redis:6379:0:${REDIS_PASSWORD:-redis123}"
+    profiles:
+      - db-tools
+
+# 开发环境额外数据卷
+volumes:
+  go_mod_cache:
+    driver: local

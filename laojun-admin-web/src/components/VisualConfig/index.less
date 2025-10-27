@@ -1,0 +1,205 @@
+.visual-config-modal {
+  .ant-modal-body {
+    padding: 16px;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  .ant-tabs-content-holder {
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+
+  .ant-card {
+    margin-bottom: 16px;
+    
+    .ant-card-body {
+      padding: 16px;
+    }
+  }
+
+  .ant-form-item {
+    margin-bottom: 16px;
+  }
+
+  .ant-slider {
+    margin: 8px 0;
+  }
+
+  .ant-color-picker {
+    width: 100%;
+  }
+
+  .menu-preview {
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    padding: 16px;
+    background: #fff;
+    min-height: 300px;
+    
+    .menu-preview-item {
+      cursor: pointer;
+      user-select: none;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+      
+      .menu-preview-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+      }
+    }
+  }
+
+  // 响应式设计
+  @media (max-width: 768px) {
+    .ant-modal {
+      width: 95% !important;
+      margin: 10px auto;
+    }
+    
+    .ant-row {
+      .ant-col {
+        margin-bottom: 16px;
+      }
+    }
+  }
+
+  // 暗色主题支持
+  .dark & {
+    .ant-modal-content {
+      background: #1f1f1f;
+      color: #fff;
+    }
+    
+    .ant-card {
+      background: #262626;
+      border-color: #434343;
+    }
+    
+    .menu-preview {
+      background: #1f1f1f;
+      border-color: #434343;
+      color: #fff;
+    }
+  }
+
+  // 自定义滚动条
+  .ant-tabs-content-holder::-webkit-scrollbar,
+  .ant-modal-body::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .ant-tabs-content-holder::-webkit-scrollbar-track,
+  .ant-modal-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+
+  .ant-tabs-content-holder::-webkit-scrollbar-thumb,
+  .ant-modal-body::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+    
+    &:hover {
+      background: #a8a8a8;
+    }
+  }
+
+  // 表单验证样式
+  .ant-form-item-has-error {
+    .ant-slider {
+      .ant-slider-track {
+        background: #ff4d4f;
+      }
+      
+      .ant-slider-handle {
+        border-color: #ff4d4f;
+      }
+    }
+  }
+
+  // 加载状态
+  .loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  // 预览模式样式
+  .preview-mode {
+    .ant-col:first-child {
+      border-right: 1px solid #d9d9d9;
+      padding-right: 24px;
+    }
+  }
+
+  // 工具提示样式
+  .config-tooltip {
+    max-width: 300px;
+  }
+
+  // 颜色选择器增强
+  .ant-color-picker-trigger {
+    width: 100%;
+    height: 32px;
+    border-radius: 6px;
+    
+    .ant-color-picker-color-block {
+      width: 100%;
+      height: 100%;
+      border-radius: 4px;
+    }
+  }
+
+  // 代码编辑器样式
+  .ant-input {
+    &.code-editor {
+      font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      background: #f6f8fa;
+      
+      &:focus {
+        background: #fff;
+      }
+    }
+  }
+
+  // 标签页增强
+  .ant-tabs {
+    .ant-tabs-tab {
+      padding: 8px 16px;
+      
+      .anticon {
+        margin-right: 6px;
+      }
+    }
+    
+    .ant-tabs-content {
+      padding-top: 16px;
+    }
+  }
+
+  // 按钮组样式
+  .config-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    
+    .ant-btn {
+      flex: 1;
+      min-width: 80px;
+    }
+  }
+}

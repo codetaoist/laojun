@@ -1,0 +1,308 @@
+# 太上老君系统 Docker 部署配置 (本地镜像优先版本)
+# 特点：
+# 1. 优先使用本地已有镜像，避免网络拉取问题
+# 2. 提供多个镜像版本选择
+# 3. 微服务架构，每个服务独立容器
+# 4. 插件市场为默认首页（80端口）
+# 5. 管理后台通过8888端口访问
+# 6. 统一的环境变量管理
+# 7. 完整的健康检查和依赖管理
+# 8. 数据持久化和日志管理
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    # 优先使用本地镜像，如果没有则使用以下任一版本
+    image: ${POSTGRES_IMAGE:-postgres:15-alpine}
+    # 备选镜像: postgres:14-alpine, postgres:13-alpine, postgres:latest
+    container_name: laojun-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-laojun}
+      POSTGRES_USER: ${POSTGRES_USER:-laojun}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-laojun123}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      # 性能优化配置
+      POSTGRES_SHARED_BUFFERS: "256MB"
+      POSTGRES_EFFECTIVE_CACHE_SIZE: "1GB"
+      POSTGRES_MAINTENANCE_WORK_MEM: "64MB"
+      POSTGRES_CHECKPOINT_COMPLETION_TARGET: "0.9"
+      POSTGRES_WAL_BUFFERS: "16MB"
+      POSTGRES_DEFAULT_STATISTICS_TARGET: "100"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+      - ../../db/migrations:/docker-entrypoint-initdb.d/migrations:ro
+      - ../../logs/postgres:/var/log/postgresql
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-laojun} -d ${POSTGRES_DB:-laojun}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # Redis 缓存
+  redis:
+    # 优先使用本地镜像，如果没有则使用以下任一版本
+    image: ${REDIS_IMAGE:-redis:7-alpine}
+    # 备选镜像: redis:6-alpine, redis:alpine, redis:latest
+    container_name: laojun-redis
+    command: >
+      redis-server 
+      --appendonly yes 
+      --requirepass ${REDIS_PASSWORD:-redis123}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 300
+      --timeout 0
+      --tcp-backlog 511
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    volumes:
+      - redis_data:/data
+      - ../../configs/redis-test.conf:/usr/local/etc/redis/redis.conf:ro
+      - ../../logs/redis:/var/log/redis
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis123}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # 配置中心服务
+  config-center:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.config-center
+    container_name: laojun-config-center
+    environment:
+      # 数据库配置
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${POSTGRES_USER:-laojun}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-laojun123}
+      - DB_NAME=${POSTGRES_DB:-laojun}
+      - DB_SSLMODE=disable
+      
+      # Redis配置
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis123}
+      - REDIS_DB=0
+      
+      # 服务配置
+      - SERVER_PORT=8081
+      - SERVER_MODE=${SERVER_MODE:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      
+      # JWT配置
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      - JWT_EXPIRE_HOURS=${JWT_EXPIRE_HOURS:-24}
+    volumes:
+      - ../../configs:/app/configs:ro
+      - ../../logs/config-center:/app/logs
+    networks:
+      - laojun-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  # 管理后台API服务
+  admin-api:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.admin-api
+    container_name: laojun-admin-api
+    environment:
+      # 数据库配置
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${POSTGRES_USER:-laojun}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-laojun123}
+      - DB_NAME=${POSTGRES_DB:-laojun}
+      - DB_SSLMODE=disable
+      
+      # Redis配置
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis123}
+      - REDIS_DB=1
+      
+      # 服务配置
+      - SERVER_PORT=8080
+      - SERVER_MODE=${SERVER_MODE:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      
+      # JWT配置
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      - JWT_EXPIRE_HOURS=${JWT_EXPIRE_HOURS:-24}
+      
+      # 配置中心
+      - CONFIG_CENTER_URL=http://config-center:8081
+    volumes:
+      - ../../configs:/app/configs:ro
+      - ../../logs/admin-api:/app/logs
+      - ../../uploads:/app/uploads
+    networks:
+      - laojun-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      config-center:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+
+  # 插件市场API服务
+  marketplace-api:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.marketplace-api
+    container_name: laojun-marketplace-api
+    environment:
+      # 数据库配置
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${POSTGRES_USER:-laojun}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-laojun123}
+      - DB_NAME=${POSTGRES_DB:-laojun}
+      - DB_SSLMODE=disable
+      
+      # Redis配置
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis123}
+      - REDIS_DB=2
+      
+      # 服务配置
+      - SERVER_PORT=8082
+      - SERVER_MODE=${SERVER_MODE:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      
+      # JWT配置
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      - JWT_EXPIRE_HOURS=${JWT_EXPIRE_HOURS:-24}
+      
+      # 配置中心
+      - CONFIG_CENTER_URL=http://config-center:8081
+    volumes:
+      - ../../configs:/app/configs:ro
+      - ../../logs/marketplace-api:/app/logs
+      - ../../uploads:/app/uploads
+    networks:
+      - laojun-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      config-center:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+
+  # Nginx反向代理
+  nginx:
+    # 优先使用本地镜像
+    image: ${NGINX_IMAGE:-nginx:alpine}
+    # 备选镜像: nginx:latest, nginx:stable-alpine
+    container_name: laojun-nginx
+    ports:
+      - "80:80"      # 插件市场首页
+      - "8888:8888"  # 管理后台
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../../web/marketplace/dist:/usr/share/nginx/html/marketplace:ro
+      - ../../web/admin/dist:/usr/share/nginx/html/admin:ro
+      - ../../logs/nginx:/var/log/nginx
+    networks:
+      - laojun-network
+    depends_on:
+      - admin-api
+      - marketplace-api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+# 网络配置
+networks:
+  laojun-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# 数据卷配置
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

@@ -1,0 +1,251 @@
+# RBAC (Role-Based Access Control) 配置
+# 为太上老君微服务平台定义角色和权限
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: taishanglaojun
+  labels:
+    name: taishanglaojun
+    security.policy: strict
+---
+# 服务账户
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: taishanglaojun-discovery
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: taishanglaojun-discovery
+    app.kubernetes.io/component: discovery
+automountServiceAccountToken: true
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: taishanglaojun-monitoring
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: taishanglaojun-monitoring
+    app.kubernetes.io/component: monitoring
+automountServiceAccountToken: true
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: taishanglaojun-admin
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: taishanglaojun-admin
+    app.kubernetes.io/component: admin
+automountServiceAccountToken: true
+---
+# 集群角色 - 服务发现
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: taishanglaojun-discovery-role
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    app.kubernetes.io/component: discovery
+rules:
+# 服务发现相关权限
+- apiGroups: [""]
+  resources: ["services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+# 配置管理权限
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+  resourceNames: ["taishanglaojun-config", "taishanglaojun-secrets"]
+# 健康检查权限
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+---
+# 集群角色 - 监控
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: taishanglaojun-monitoring-role
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    app.kubernetes.io/component: monitoring
+rules:
+# 监控数据收集权限
+- apiGroups: [""]
+  resources: ["nodes", "nodes/proxy", "nodes/metrics", "services", "endpoints", "pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "daemonsets", "replicasets", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+# 指标收集权限
+- nonResourceURLs: ["/metrics", "/metrics/cadvisor"]
+  verbs: ["get"]
+---
+# 角色 - 管理员
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: taishanglaojun
+  name: taishanglaojun-admin-role
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    app.kubernetes.io/component: admin
+rules:
+# 完整的命名空间管理权限
+- apiGroups: [""]
+  resources: ["*"]
+  verbs: ["*"]
+- apiGroups: ["apps"]
+  resources: ["*"]
+  verbs: ["*"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["*"]
+  verbs: ["*"]
+- apiGroups: ["policy"]
+  resources: ["*"]
+  verbs: ["*"]
+# 配置和密钥管理
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+---
+# 角色绑定 - 服务发现
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: taishanglaojun-discovery-binding
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    app.kubernetes.io/component: discovery
+subjects:
+- kind: ServiceAccount
+  name: taishanglaojun-discovery
+  namespace: taishanglaojun
+roleRef:
+  kind: ClusterRole
+  name: taishanglaojun-discovery-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# 角色绑定 - 监控
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: taishanglaojun-monitoring-binding
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    app.kubernetes.io/component: monitoring
+subjects:
+- kind: ServiceAccount
+  name: taishanglaojun-monitoring
+  namespace: taishanglaojun
+roleRef:
+  kind: ClusterRole
+  name: taishanglaojun-monitoring-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# 角色绑定 - 管理员
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: taishanglaojun-admin-binding
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    app.kubernetes.io/component: admin
+subjects:
+- kind: ServiceAccount
+  name: taishanglaojun-admin
+  namespace: taishanglaojun
+roleRef:
+  kind: Role
+  name: taishanglaojun-admin-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Pod 安全策略
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: taishanglaojun-psp
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  supplementalGroups:
+    rule: 'MustRunAs'
+    ranges:
+      - min: 1
+        max: 65535
+  fsGroup:
+    rule: 'MustRunAs'
+    ranges:
+      - min: 1
+        max: 65535
+  readOnlyRootFilesystem: true
+  seLinux:
+    rule: 'RunAsAny'
+---
+# 集群角色 - Pod 安全策略使用
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: taishanglaojun-psp-use
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+rules:
+- apiGroups: ['policy']
+  resources: ['podsecuritypolicies']
+  verbs: ['use']
+  resourceNames:
+  - taishanglaojun-psp
+---
+# 角色绑定 - Pod 安全策略
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: taishanglaojun-psp-binding
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+roleRef:
+  kind: ClusterRole
+  name: taishanglaojun-psp-use
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: taishanglaojun-discovery
+  namespace: taishanglaojun
+- kind: ServiceAccount
+  name: taishanglaojun-monitoring
+  namespace: taishanglaojun
+- kind: ServiceAccount
+  name: taishanglaojun-admin
+  namespace: taishanglaojun

@@ -1,0 +1,525 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每天凌晨 2 点运行安全扫描
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # 代码安全扫描
+  code-security-scan:
+    name: Code Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      # Gosec - Go 安全扫描
+      - name: Run Gosec Security Scanner
+        uses: securecodewarrior/github-action-gosec@master
+        with:
+          args: '-fmt sarif -out gosec-results.sarif ./...'
+
+      - name: Upload Gosec scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: gosec-results.sarif
+
+      # Semgrep - 静态代码分析
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/golang
+            p/docker
+            p/kubernetes
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+      # CodeQL 分析
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: go
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v2
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+      # 检查硬编码密钥
+      - name: Run TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  # 依赖安全扫描
+  dependency-security-scan:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      # Go 模块安全扫描
+      - name: Run govulncheck
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-input: '1.21'
+          go-package: ./...
+
+      # Nancy - Go 依赖漏洞扫描
+      - name: Run Nancy
+        run: |
+          go install github.com/sonatypecommunity/nancy@latest
+          go list -json -deps ./... | nancy sleuth
+
+      # Snyk 安全扫描
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/golang@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --sarif-file-output=snyk-results.sarif
+
+      - name: Upload Snyk scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: snyk-results.sarif
+
+      # FOSSA 许可证合规扫描
+      - name: Run FOSSA scan
+        uses: fossas/fossa-action@main
+        with:
+          api-key: ${{ secrets.FOSSA_API_KEY }}
+
+  # Docker 镜像安全扫描
+  docker-security-scan:
+    name: Docker Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+    strategy:
+      matrix:
+        service: [laojun-discovery, laojun-monitoring]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service }}
+          load: true
+          tags: ${{ matrix.service }}:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Trivy 容器镜像扫描
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ matrix.service }}:test
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.service }}.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+
+      # Grype 漏洞扫描
+      - name: Run Grype vulnerability scanner
+        uses: anchore/scan-action@v3
+        with:
+          image: ${{ matrix.service }}:test
+          fail-build: false
+          severity-cutoff: high
+          output-format: sarif
+
+      - name: Upload Grype scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: results.sarif
+
+      # Docker Bench 安全基准测试
+      - name: Run Docker Bench Security
+        run: |
+          docker run --rm --net host --pid host --userns host --cap-add audit_control \
+            -e DOCKER_CONTENT_TRUST=$DOCKER_CONTENT_TRUST \
+            -v /etc:/etc:ro \
+            -v /usr/bin/containerd:/usr/bin/containerd:ro \
+            -v /usr/bin/runc:/usr/bin/runc:ro \
+            -v /usr/lib/systemd:/usr/lib/systemd:ro \
+            -v /var/lib:/var/lib:ro \
+            -v /var/run/docker.sock:/var/run/docker.sock:ro \
+            --label docker_bench_security \
+            docker/docker-bench-security
+
+      # Hadolint Dockerfile 检查
+      - name: Run Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: ./${{ matrix.service }}/Dockerfile
+          format: sarif
+          output-file: hadolint-results-${{ matrix.service }}.sarif
+
+      - name: Upload Hadolint scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: hadolint-results-${{ matrix.service }}.sarif
+
+  # Kubernetes 安全扫描
+  kubernetes-security-scan:
+    name: Kubernetes Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.12.0'
+
+      # 生成 Kubernetes 清单
+      - name: Generate Kubernetes manifests
+        run: |
+          cd helm
+          helm dependency update taishanglaojun
+          helm template taishanglaojun ./taishanglaojun \
+            --set global.imageRegistry=ghcr.io/test \
+            --set global.domain=test.local \
+            > k8s-manifests.yaml
+
+      # Kubesec 安全扫描
+      - name: Run Kubesec scan
+        run: |
+          curl -sSX POST --data-binary @helm/k8s-manifests.yaml \
+            https://v2.kubesec.io/scan > kubesec-results.json
+          
+          # 检查是否有高风险问题
+          if jq -e '.[] | select(.score < 0)' kubesec-results.json; then
+            echo "High risk security issues found!"
+            jq '.[] | select(.score < 0)' kubesec-results.json
+            exit 1
+          fi
+
+      # Polaris 配置验证
+      - name: Run Polaris
+        uses: fairwindsops/polaris/.github/actions/polaris@master
+        with:
+          config: |
+            checks:
+              cpuRequestsMissing: warning
+              cpuLimitsMissing: warning
+              memoryRequestsMissing: warning
+              memoryLimitsMissing: warning
+              readinessProbeMissing: warning
+              livenessProbeMissing: warning
+              pullPolicyNotAlways: ignore
+              runAsRootAllowed: danger
+              runAsPrivileged: danger
+              notReadOnlyRootFilesystem: warning
+              hostNetworkSet: danger
+              hostPIDSet: danger
+              hostIPCSet: danger
+              hostPortSet: warning
+              capabilities: warning
+
+      # Falco 规则验证
+      - name: Validate Falco rules
+        run: |
+          # 下载 Falco
+          curl -L -o falco.tar.gz https://github.com/falcosecurity/falco/releases/download/0.36.2/falco-0.36.2-linux-x86_64.tar.gz
+          tar -xzf falco.tar.gz
+          
+          # 验证自定义 Falco 规则（如果存在）
+          if [ -f "security/falco-rules.yaml" ]; then
+            ./falco-0.36.2-linux-x86_64/usr/bin/falco -V security/falco-rules.yaml
+          fi
+
+      # OPA Gatekeeper 策略验证
+      - name: Validate OPA policies
+        if: hashFiles('security/opa-policies/*.rego') != ''
+        run: |
+          # 安装 OPA
+          curl -L -o opa https://openpolicyagent.org/downloads/v0.57.0/opa_linux_amd64_static
+          chmod +x opa
+          
+          # 验证 OPA 策略
+          for policy in security/opa-policies/*.rego; do
+            if [ -f "$policy" ]; then
+              ./opa fmt --diff "$policy"
+              ./opa test security/opa-policies/
+            fi
+          done
+
+  # 基础设施安全扫描
+  infrastructure-security-scan:
+    name: Infrastructure Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Checkov - 基础设施即代码安全扫描
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: dockerfile,kubernetes,github_actions
+          output_format: sarif
+          output_file_path: checkov-results.sarif
+
+      - name: Upload Checkov scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: checkov-results.sarif
+
+      # Terrascan - 基础设施安全扫描
+      - name: Run Terrascan
+        uses: tenable/terrascan-action@main
+        with:
+          iac_type: 'k8s'
+          iac_version: 'v1'
+          policy_type: 'k8s'
+          only_warn: true
+          sarif_upload: true
+
+      # Kics - 基础设施安全扫描
+      - name: Run KICS Scan
+        uses: checkmarx/kics-github-action@v1.7.0
+        with:
+          path: '.'
+          output_path: kics-results
+          output_formats: 'sarif'
+          exclude_paths: '.git,node_modules'
+
+      - name: Upload KICS scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: kics-results/results.sarif
+
+  # 网络安全扫描
+  network-security-scan:
+    name: Network Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Nmap 网络扫描（仅在调度或手动触发时运行）
+      - name: Run Nmap scan
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nmap
+          
+          # 扫描常见端口
+          nmap -sS -O -sV --script vuln localhost > nmap-results.txt || true
+          
+          # 检查是否有开放的不安全端口
+          if grep -E "(21/tcp|23/tcp|53/tcp|135/tcp|139/tcp|445/tcp)" nmap-results.txt; then
+            echo "Warning: Potentially insecure ports detected"
+            cat nmap-results.txt
+          fi
+
+      - name: Upload network scan results
+        uses: actions/upload-artifact@v3
+        with:
+          name: network-scan-results
+          path: nmap-results.txt
+
+  # 合规性检查
+  compliance-check:
+    name: Compliance Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # CIS Kubernetes Benchmark
+      - name: Run CIS Kubernetes Benchmark
+        run: |
+          # 下载 kube-bench
+          curl -L https://github.com/aquasecurity/kube-bench/releases/download/v0.6.15/kube-bench_0.6.15_linux_amd64.tar.gz | tar xz
+          
+          # 运行 CIS 基准测试（模拟）
+          ./kube-bench run --targets node,policies,managedservices --benchmark cis-1.23 --outputfile cis-results.json --json || true
+
+      - name: Upload CIS benchmark results
+        uses: actions/upload-artifact@v3
+        with:
+          name: cis-benchmark-results
+          path: cis-results.json
+
+      # NIST 合规性检查
+      - name: NIST Compliance Check
+        run: |
+          echo "Checking NIST 800-53 compliance..."
+          
+          # 检查是否有安全控制措施
+          COMPLIANCE_SCORE=0
+          
+          # AC-2: 账户管理
+          if [ -f "security/rbac.yaml" ]; then
+            echo "✓ RBAC configuration found"
+            COMPLIANCE_SCORE=$((COMPLIANCE_SCORE + 1))
+          fi
+          
+          # SC-8: 传输保密性和完整性
+          if grep -r "tls\|ssl" helm/ > /dev/null; then
+            echo "✓ TLS/SSL configuration found"
+            COMPLIANCE_SCORE=$((COMPLIANCE_SCORE + 1))
+          fi
+          
+          # AU-2: 审计事件
+          if grep -r "audit\|log" helm/ > /dev/null; then
+            echo "✓ Audit/logging configuration found"
+            COMPLIANCE_SCORE=$((COMPLIANCE_SCORE + 1))
+          fi
+          
+          # SI-4: 信息系统监控
+          if [ -d "helm/taishanglaojun/charts/taishanglaojun-monitoring" ]; then
+            echo "✓ Monitoring stack found"
+            COMPLIANCE_SCORE=$((COMPLIANCE_SCORE + 1))
+          fi
+          
+          echo "NIST Compliance Score: $COMPLIANCE_SCORE/4"
+          
+          if [ $COMPLIANCE_SCORE -lt 3 ]; then
+            echo "Warning: Low compliance score. Please review security controls."
+          fi
+
+  # 安全报告汇总
+  security-report:
+    name: Security Report
+    runs-on: ubuntu-latest
+    needs: [code-security-scan, dependency-security-scan, docker-security-scan, kubernetes-security-scan, infrastructure-security-scan, compliance-check]
+    if: always()
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Generate security report
+        run: |
+          cat > security-report.md << 'EOF'
+          # Security Scan Report
+          
+          **Date**: $(date)
+          **Repository**: ${{ github.repository }}
+          **Branch**: ${{ github.ref_name }}
+          **Commit**: ${{ github.sha }}
+          
+          ## Summary
+          
+          | Scan Type | Status |
+          |-----------|--------|
+          | Code Security | ${{ needs.code-security-scan.result }} |
+          | Dependency Security | ${{ needs.dependency-security-scan.result }} |
+          | Docker Security | ${{ needs.docker-security-scan.result }} |
+          | Kubernetes Security | ${{ needs.kubernetes-security-scan.result }} |
+          | Infrastructure Security | ${{ needs.infrastructure-security-scan.result }} |
+          | Compliance Check | ${{ needs.compliance-check.result }} |
+          
+          ## Recommendations
+          
+          1. **Regular Updates**: Keep all dependencies and base images updated
+          2. **Security Policies**: Implement and enforce security policies
+          3. **Monitoring**: Continuously monitor for security threats
+          4. **Training**: Provide security training for development team
+          5. **Incident Response**: Have an incident response plan ready
+          
+          ## Next Steps
+          
+          - Review and fix any high/critical severity issues
+          - Update security policies and procedures
+          - Schedule regular security reviews
+          - Consider implementing additional security tools
+          
+          EOF
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report
+          path: security-report.md
+
+      - name: Comment security report on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('security-report.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🔒 Security Scan Results\n\n${report}`
+            });
+
+  # 安全通知
+  security-notification:
+    name: Security Notification
+    runs-on: ubuntu-latest
+    needs: [code-security-scan, dependency-security-scan, docker-security-scan, kubernetes-security-scan, infrastructure-security-scan, compliance-check]
+    if: always() && (needs.code-security-scan.result == 'failure' || needs.dependency-security-scan.result == 'failure' || needs.docker-security-scan.result == 'failure')
+    steps:
+      - name: Notify security team
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: |
+            🚨 **Security Alert** 🚨
+            
+            **Repository**: ${{ github.repository }}
+            **Branch**: ${{ github.ref_name }}
+            **Trigger**: ${{ github.event_name }}
+            
+            **Failed Scans**:
+            ${{ needs.code-security-scan.result == 'failure' && '❌ Code Security Scan' || '' }}
+            ${{ needs.dependency-security-scan.result == 'failure' && '❌ Dependency Security Scan' || '' }}
+            ${{ needs.docker-security-scan.result == 'failure' && '❌ Docker Security Scan' || '' }}
+            
+            Please review the security scan results and take immediate action.
+            
+            🔗 [View Workflow Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SECURITY_SLACK_WEBHOOK_URL }}

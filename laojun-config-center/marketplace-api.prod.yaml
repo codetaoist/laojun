@@ -1,0 +1,142 @@
+# Marketplace API 生产环境配置
+# 继承基础配置: configs/base.yaml
+extends: "base.yaml"
+
+app:
+  name: "marketplace-api"
+  version: "1.0.0"
+  env: "production"
+  debug: false
+
+server:
+  host: "0.0.0.0"
+  port: 8082
+  mode: "release"
+  cors:
+    enabled: true
+    origins:
+      - "https://marketplace.laojun.com"
+      - "https://admin.laojun.com"
+    methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+    headers:
+      - "Content-Type"
+      - "Authorization"
+      - "X-Requested-With"
+
+# 生产环境数据库配置
+database:
+  host: "${DB_HOST:postgres}"
+  port: 5432
+  username: "${DB_USER:laojun}"
+  password: "${DB_PASSWORD}"
+  dbname: "${DB_NAME:laojun_prod}"
+  sslmode: "require"
+  maxOpenConns: 50
+  maxIdleConns: 10
+  connMaxLifetime: 600
+
+# 生产环境Redis配置
+redis:
+  host: "${REDIS_HOST:redis}"
+  port: 6379
+  password: "${REDIS_PASSWORD}"
+  db: 0
+  poolSize: 20
+  minIdleConns: 10
+
+# 生产环境JWT配置
+jwt:
+  secret: "${JWT_SECRET}"
+  expire: 7200
+
+# 生产环境日志配置
+log:
+  level: "info"
+  format: "json"
+  output: "both"
+  filename: "/app/logs/marketplace-api.log"
+  maxSize: 100
+  maxBackups: 10
+  maxAge: 30
+
+# 市场特定配置
+marketplace:
+  enablePluginUpload: true
+  maxPluginSize: 100MB
+  allowedPluginTypes:
+    - "zip"
+    - "tar.gz"
+  pluginStoragePath: "/app/uploads/plugins"
+  reviewRequired: true
+  autoApproval: false
+
+# 生产环境存储配置
+storage:
+  type: "s3"
+  s3:
+    bucket: "${S3_BUCKET:laojun-marketplace}"
+    region: "${S3_REGION:us-east-1}"
+    accessKey: "${S3_ACCESS_KEY}"
+    secretKey: "${S3_SECRET_KEY}"
+    endpoint: "${S3_ENDPOINT}"
+  local:
+    basePath: "/app/uploads/marketplace"
+    maxFileSize: 100MB
+    allowedTypes:
+      - "image/jpeg"
+      - "image/png"
+      - "image/gif"
+      - "application/zip"
+      - "application/tar"
+      - "application/gzip"
+
+# 生产环境缓存配置
+cache:
+  driver: "redis"
+  ttl: 7200
+  prefix: "marketplace:prod:"
+
+# 生产环境安全配置
+security:
+  jwtSecret: "${JWT_SECRET}"
+  jwtExpireHours: 24
+  mfaEnabled: true
+  rateLimitEnabled: true
+  marketplaceCaptchaEnabled: true
+  captchaType: "recaptcha"
+  recaptchaSiteKey: "${RECAPTCHA_SITE_KEY}"
+  recaptchaSecretKey: "${RECAPTCHA_SECRET_KEY}"
+
+# 限流配置
+rateLimit:
+  enabled: true
+  globalRequests: 1000
+  globalWindow: 60
+  userRequests: 100
+  userWindow: 60
+
+# 监控配置
+monitoring:
+  enabled: true
+  metricsPath: "/metrics"
+  healthPath: "/health"
+  
+# 服务发现配置
+discovery:
+  enabled: true
+  url: "${DISCOVERY_URL:http://laojun-discovery:8081}"
+  serviceName: "marketplace-api"
+  tags:
+    - "api"
+    - "marketplace"
+    - "v1"
+    - "production"
+  healthCheck:
+    interval: "30s"
+    timeout: "10s"
+    path: "/health"

@@ -1,0 +1,98 @@
+{{- if .Values.discovery.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "taishanglaojun-platform.fullname" . }}-discovery
+  namespace: {{ .Values.namespace.name | default "taishanglaojun" }}
+  labels:
+    {{- include "taishanglaojun-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: discovery
+spec:
+  {{- if not .Values.discovery.autoscaling.enabled }}
+  replicas: {{ .Values.discovery.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "taishanglaojun-platform.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: discovery
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.discovery.service.metricsPort }}"
+        prometheus.io/path: "/metrics"
+        checksum/config: {{ include (print $.Template.BasePath "/discovery-configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "taishanglaojun-platform.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: discovery
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "taishanglaojun-platform.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: laojun-discovery
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.discovery.image.repository }}:{{ .Values.discovery.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.discovery.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.discovery.service.port }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.discovery.service.metricsPort }}
+              protocol: TCP
+          env:
+            - name: SERVER_PORT
+              value: "{{ .Values.discovery.service.port }}"
+            - name: METRICS_PORT
+              value: "{{ .Values.discovery.service.metricsPort }}"
+            - name: CONSUL_ADDRESS
+              value: "consul:8500"
+            - name: REDIS_ADDRESS
+              value: "redis:6379"
+            - name: LOG_LEVEL
+              value: "{{ .Values.discovery.logLevel | default "info" }}"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.discovery.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/configs
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "taishanglaojun-platform.fullname" . }}-discovery-config
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

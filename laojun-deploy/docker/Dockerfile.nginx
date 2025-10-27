@@ -1,0 +1,50 @@
+# Nginx + 前端静态文件服务 Dockerfile
+# 第一阶段：前端构建
+FROM node:18-alpine AS frontend-builder
+
+# 设置工作目录
+WORKDIR /app
+
+# 构建插件市场前端
+COPY web/marketplace/package*.json ./marketplace/
+WORKDIR /app/marketplace
+RUN npm ci
+
+COPY web/marketplace/ ./
+RUN npm run build
+
+# 构建管理后台前端
+WORKDIR /app
+COPY web/admin/package*.json ./admin/
+WORKDIR /app/admin
+RUN npm ci
+
+COPY web/admin/ ./
+RUN npm run build
+
+# 第二阶段：Nginx运行时
+FROM nginx:stable-alpine
+
+# 安装curl用于健康检查
+RUN apk add --no-cache curl
+
+# 复制前端构建产物
+COPY --from=frontend-builder /app/marketplace/dist /usr/share/nginx/html/marketplace
+COPY --from=frontend-builder /app/admin/dist /usr/share/nginx/html/admin
+
+# 复制Nginx配置
+COPY deploy/nginx/nginx.dev.conf /etc/nginx/nginx.conf
+COPY deploy/nginx/conf.d/laojun.conf /etc/nginx/conf.d/default.conf
+
+# 创建日志目录
+RUN mkdir -p /var/log/nginx
+
+# 暴露端口
+EXPOSE 80 8888
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
+
+# 启动Nginx
+CMD ["nginx", "-g", "daemon off;"]

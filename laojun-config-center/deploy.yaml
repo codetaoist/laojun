@@ -1,0 +1,108 @@
+# 太上老君系统部署配置
+# 统一管理所有环境的部署参数
+
+# 项目基本信息
+project:
+  name: "laojun"
+  version: "1.0.0"
+  description: "太上老君系统"
+
+# 环境配置
+environments:
+  dev:
+    compose_file: "docker-compose.yml"
+    env_file: ".env.development"
+    replicas:
+      admin_api: 1
+      marketplace_api: 1
+      config_center: 1
+    resources:
+      memory_limit: "512m"
+      cpu_limit: "0.5"
+    
+  staging:
+    compose_file: "docker-compose.staging.yml"
+    env_file: ".env.staging"
+    replicas:
+      admin_api: 2
+      marketplace_api: 2
+      config_center: 1
+    resources:
+      memory_limit: "1g"
+      cpu_limit: "1.0"
+    
+  prod:
+    compose_file: "docker-compose.yml"
+    env_file: ".env.production"
+    replicas:
+      admin_api: 3
+      marketplace_api: 3
+      config_center: 2
+    resources:
+      memory_limit: "2g"
+      cpu_limit: "2.0"
+
+# 服务配置
+services:
+  postgres:
+    image: "postgres:15-alpine"
+    port: 5432
+    volumes:
+      - "postgres_data:/var/lib/postgresql/data"
+    
+  redis:
+    image: "redis:7-alpine"
+    port: 6379
+    volumes:
+      - "redis_data:/data"
+    
+  nginx:
+    image: "nginx:alpine"
+    ports:
+      - "80:80"
+      - "443:443"
+    config_path: "../nginx"
+    
+  supervisor:
+    config_path: "../supervisor"
+
+# 监控配置
+monitoring:
+  postgres_exporter:
+    enabled: true
+    port: 9187
+  redis_exporter:
+    enabled: true
+    port: 9121
+  prometheus:
+    enabled: false
+    port: 9090
+  grafana:
+    enabled: false
+    port: 3000
+
+# 备份配置
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # 每天凌晨2点
+  retention_days: 30
+  storage_path: "/var/backups/laojun"
+
+# 日志配置
+logging:
+  level: "info"
+  format: "json"
+  rotation:
+    max_size: "100m"
+    max_files: 10
+    max_age: 30
+
+# 安全配置
+security:
+  ssl:
+    enabled: false
+    cert_path: "/etc/ssl/certs"
+    key_path: "/etc/ssl/private"
+  firewall:
+    enabled: false
+    allowed_ports: [80, 443, 22]

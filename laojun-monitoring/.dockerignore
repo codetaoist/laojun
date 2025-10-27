@@ -1,0 +1,74 @@
+# Git 相关
+.git
+.gitignore
+.gitattributes
+
+# 文档
+README.md
+CHANGELOG.md
+LICENSE
+*.md
+
+# 开发工具
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 构建产物
+*.exe
+*.dll
+*.so
+*.dylib
+laojun-monitoring
+main
+
+# 测试文件
+*_test.go
+test/
+coverage.out
+coverage.html
+*.prof
+
+# 临时文件
+tmp/
+temp/
+.tmp/
+
+# 日志文件
+logs/
+*.log
+
+# 数据文件
+data/
+*.db
+*.sqlite
+
+# 配置文件（保留默认配置）
+config/local.yaml
+config/production.yaml
+config/development.yaml
+
+# 依赖管理
+vendor/
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# Docker 相关
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+
+# 其他
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

@@ -1,0 +1,181 @@
+.upload-plugin-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 32px;
+
+    .ant-typography {
+      margin-bottom: 8px;
+    }
+  }
+
+  .steps-card {
+    margin-bottom: 24px;
+    
+    .ant-steps {
+      padding: 24px 0;
+    }
+  }
+
+  .step-content {
+    margin-bottom: 24px;
+
+    .upload-card,
+    .form-card,
+    .confirm-card {
+      .ant-card-head {
+        border-bottom: 2px solid #f0f0f0;
+      }
+
+      .ant-card-body {
+        padding: 32px;
+      }
+    }
+
+    .upload-card {
+      .ant-upload-drag {
+        border: 2px dashed #d9d9d9;
+        border-radius: 8px;
+        background: #fafafa;
+        transition: all 0.3s ease;
+
+        &:hover {
+          border-color: #1890ff;
+          background: #f6ffed;
+        }
+
+        .ant-upload-drag-icon {
+          margin-bottom: 16px;
+        }
+
+        .ant-upload-text {
+          font-size: 16px;
+          font-weight: 500;
+          color: #666;
+          margin-bottom: 8px;
+        }
+
+        .ant-upload-hint {
+          color: #999;
+          font-size: 14px;
+        }
+      }
+    }
+
+    .form-card {
+      .ant-form-item-label > label {
+        font-weight: 500;
+        color: #262626;
+      }
+
+      .ant-input,
+      .ant-input-number,
+      .ant-select-selector {
+        border-radius: 6px;
+      }
+
+      .ant-input:focus,
+      .ant-input-focused,
+      .ant-input-number:focus,
+      .ant-input-number-focused,
+      .ant-select-focused .ant-select-selector {
+        border-color: #1890ff;
+        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+      }
+    }
+
+    .confirm-card {
+      .ant-typography h4 {
+        color: #1890ff;
+        margin-bottom: 16px;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 8px;
+      }
+
+      .ant-space-vertical {
+        .ant-space-item {
+          display: flex;
+          align-items: center;
+          padding: 8px 0;
+
+          .ant-typography {
+            margin: 0;
+          }
+        }
+      }
+
+      .ant-tag {
+        margin: 2px;
+      }
+    }
+  }
+
+  .action-card {
+    text-align: center;
+    
+    .ant-card-body {
+      padding: 24px;
+    }
+
+    .ant-btn {
+      min-width: 100px;
+      height: 40px;
+      border-radius: 6px;
+      font-weight: 500;
+
+      &.ant-btn-primary {
+        background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+        border: none;
+        box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+
+        &:hover {
+          background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+          box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4);
+        }
+      }
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .upload-plugin-page {
+    padding: 16px;
+
+    .step-content {
+      .upload-card,
+      .form-card,
+      .confirm-card {
+        .ant-card-body {
+          padding: 16px;
+        }
+      }
+
+      .confirm-card {
+        .ant-col {
+          margin-bottom: 24px;
+        }
+      }
+    }
+  }
+}
+
+// 暗色主题适配
+@media (prefers-color-scheme: dark) {
+  .upload-plugin-page {
+    .upload-card {
+      .ant-upload-drag {
+        background: #1f1f1f;
+        border-color: #434343;
+
+        &:hover {
+          background: #262626;
+          border-color: #1890ff;
+        }
+      }
+    }
+  }
+}

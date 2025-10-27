@@ -1,0 +1,137 @@
+# Marketplace API 开发环境配置
+# 继承基础配置: configs/base.yaml
+extends: "base.yaml"
+
+app:
+  name: "marketplace-api"
+  version: "1.0.0"
+  env: "development"
+  debug: true
+
+server:
+  host: "0.0.0.0"
+  port: 8082
+  mode: "debug"
+  cors:
+    enabled: true
+    origins:
+      - "http://localhost"
+      - "http://localhost:3000"
+      - "http://localhost:5173"
+      - "http://localhost:8080"
+      - "http://localhost:8888"
+    methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+    headers:
+      - "Content-Type"
+      - "Authorization"
+      - "X-Requested-With"
+
+# 开发环境数据库配置
+database:
+  host: "localhost"
+  port: 5432
+  username: "laojun"
+  password: "laojun123"
+  dbname: "laojun_dev"
+  sslmode: "disable"
+  maxOpenConns: 25
+  maxIdleConns: 5
+  connMaxLifetime: 300
+
+# 开发环境Redis配置
+redis:
+  host: "localhost"
+  port: 6379
+  password: "redis123"
+  db: 0
+  poolSize: 10
+  minIdleConns: 5
+
+# 开发环境JWT配置
+jwt:
+  secret: "marketplace-dev-secret-key-2024"
+  expire: 7200
+
+# 开发环境日志配置
+log:
+  level: "debug"
+  format: "text"
+  output: "both"
+  filename: "./logs/marketplace-api.log"
+  maxSize: 50
+  maxBackups: 3
+  maxAge: 7
+
+# 市场特定配置
+marketplace:
+  enablePluginUpload: true
+  maxPluginSize: 50MB
+  allowedPluginTypes:
+    - "zip"
+    - "tar.gz"
+  pluginStoragePath: "./uploads/plugins"
+  reviewRequired: false
+  autoApproval: true
+
+# 开发环境存储配置
+storage:
+  type: "local"
+  local:
+    basePath: "./uploads/marketplace"
+    maxFileSize: 50MB
+    allowedTypes:
+      - "image/jpeg"
+      - "image/png"
+      - "image/gif"
+      - "application/zip"
+      - "application/tar"
+      - "application/gzip"
+
+# 开发环境缓存配置
+cache:
+  driver: "redis"
+  ttl: 3600
+  prefix: "marketplace:dev:"
+
+# 开发环境安全配置
+security:
+  jwtSecret: "marketplace-dev-secret-key-2024"
+  jwtExpireHours: 24
+  mfaEnabled: false
+  rateLimitEnabled: false
+  marketplaceCaptchaEnabled: false
+  captchaType: "image"
+
+# 限流配置（开发环境宽松）
+rateLimit:
+  enabled: false
+  globalRequests: 10000
+  globalWindow: 60
+  userRequests: 1000
+  userWindow: 60
+
+# 监控配置
+monitoring:
+  enabled: true
+  metricsPath: "/metrics"
+  healthPath: "/health"
+  
+# 服务发现配置
+discovery:
+  enabled: true
+  url: "http://localhost:8081"
+  serviceName: "marketplace-api"
+  tags:
+    - "api"
+    - "marketplace"
+    - "v1"
+    - "development"
+  healthCheck:
+    interval: "30s"
+    timeout: "10s"
+    path: "/health"

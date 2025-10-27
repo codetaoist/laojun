@@ -1,0 +1,16 @@
+{{- if .Values.namespace.create }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespace.name | default "taishanglaojun" }}
+  labels:
+    name: {{ .Values.namespace.name | default "taishanglaojun" }}
+    app.kubernetes.io/name: {{ include "taishanglaojun-platform.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/part-of: taishanglaojun-platform
+  annotations:
+    description: "太上老君微服务平台核心服务命名空间"
+    version: {{ .Chart.AppVersion | quote }}
+{{- end }}

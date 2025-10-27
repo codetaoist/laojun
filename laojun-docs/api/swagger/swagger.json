@@ -1,0 +1,5248 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Laojun API",
+    "description": "Laojun Platform API Documentation",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Laojun Team",
+      "email": "team@laojun.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Development server"
+    }
+  ],
+  "paths": {
+    "/admin/appeals/process": {
+      "post": {
+        "tags": [
+          "插件申诉"
+        ],
+        "summary": "处理申诉",
+        "description": "管理员处理开发者申诉",
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "\"申诉处理请求\"",
+            "required": true,
+            "schema": {
+              "type": "models.AppealProcessRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/appeals/{id}": {
+      "get": {
+        "tags": [
+          "插件申诉"
+        ],
+        "summary": "获取申诉详情",
+        "description": "获取指定申诉的详细信息",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "\"申诉ID\"",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/plugin-review/appeals": {
+      "get": {
+        "tags": [
+          "插件审核"
+        ],
+        "summary": "获取申诉列表",
+        "description": "获取申诉列表，支持分页和过滤",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "\"申诉状态过滤\"",
+            "schema": {
+              "type": "[]string"
+            }
+          },
+          {
+            "name": "plugin_id",
+            "in": "query",
+            "description": "\"插件ID过滤\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "developer_id",
+            "in": "query",
+            "description": "\"开发者ID过滤\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "description": "\"开始日期过滤\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "description": "\"结束日期过滤\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "\"页码\" default(1)",
+            "schema": {
+              "type": "int"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "\"每页数量\" default(20)",
+            "schema": {
+              "type": "int"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "description": "\"排序字段\" default(\"created_at\")",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "description": "\"排序方向\" default(\"DESC\")",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/plugins": {
+      "get": {
+        "tags": [
+          "总后台插件管理"
+        ],
+        "summary": "获取管理员插件列表",
+        "description": "获取总后台管理的插件列表，支持筛选和分页",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "\"插件状态过滤\"",
+            "schema": {
+              "type": "[]string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "\"分类过滤\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "developer",
+            "in": "query",
+            "description": "\"开发者过滤\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "\"页码\" default(1)",
+            "schema": {
+              "type": "int"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "\"每页数量\" default(20)",
+            "schema": {
+              "type": "int"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "description": "\"排序字段\" default(\"created_at\")",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "description": "\"排序方向\" default(\"DESC\")",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/plugins/dashboard-stats": {
+      "get": {
+        "tags": [
+          "总后台插件管理"
+        ],
+        "summary": "获取仪表板统计",
+        "description": "获取总后台插件管理的仪表板统计信息",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/plugins/{id}": {
+      "get": {
+        "tags": [
+          "总后台插件管理"
+        ],
+        "summary": "获取插件详情（管理员视图）",
+        "description": "获取插件的详细信息，包括管理员专用的统计和配置信息",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "\"插件ID\"",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/plugins/{id}/config": {
+      "get": {
+        "tags": [
+          "总后台插件管理"
+        ],
+        "summary": "获取插件配置",
+        "description": "获取插件的配置信息",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "\"插件ID\"",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "总后台插件管理"
+        ],
+        "summary": "更新插件配置",
+        "description": "更新插件的配置信息",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "\"插件ID\"",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "request",
+            "in": "body",
+            "description": "\"配置更新请求\"",
+            "required": true,
+            "schema": {
+              "type": "models.UpdatePluginConfigRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/plugins/{id}/logs": {
+      "get": {
+        "tags": [
+          "总后台插件管理"
+        ],
+        "summary": "获取插件日志",
+        "description": "获取插件的操作日志",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "\"插件ID\"",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "\"页码\" default(1)",
+            "schema": {
+              "type": "int"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "\"每页数量\" default(50)",
+            "schema": {
+              "type": "int"
+            }
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "description": "\"日志级别过滤\"",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/plugins/{id}/stats": {
+      "get": {
+        "tags": [
+          "总后台插件管理"
+        ],
+        "summary": "获取插件统计信息",
+        "description": "获取插件的详细统计信息，包括下载量、评分、收入等",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "\"插件ID\"",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/plugins/{id}/status": {
+      "patch": {
+        "tags": [
+          "总后台插件管理"
+        ],
+        "summary": "更新插件状态",
+        "description": "管理员更新插件状态（启用、禁用、下架等）",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "\"插件ID\"",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "request",
+            "in": "body",
+            "description": "\"状态更新请求\"",
+            "required": true,
+            "schema": {
+              "type": "models.UpdatePluginStatusRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/reviews/batch": {
+      "post": {
+        "tags": [
+          "插件审核"
+        ],
+        "summary": "批量审核插件",
+        "description": "批量审核多个插件",
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "\"批量审核请求\"",
+            "required": true,
+            "schema": {
+              "type": "models.BatchReviewRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/reviews/my-tasks": {
+      "get": {
+        "tags": [
+          "插件审核"
+        ],
+        "summary": "获取我的审核任务",
+        "description": "获取当前审核员分配的审核任务",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "\"页码\" default(1)",
+            "schema": {
+              "type": "int"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "\"每页数量\" default(20)",
+            "schema": {
+              "type": "int"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "\"状态过滤\"",
+            "schema": {
+              "type": "[]string"
+            }
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "description": "\"优先级过滤\"",
+            "schema": {
+              "type": "[]string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/reviews/queue": {
+      "get": {
+        "tags": [
+          "插件审核"
+        ],
+        "summary": "获取审核队列",
+        "description": "获取待审核的插件列表",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "\"审核状态过滤\"",
+            "schema": {
+              "type": "[]string"
+            }
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "description": "\"优先级过滤\"",
+            "schema": {
+              "type": "[]string"
+            }
+          },
+          {
+            "name": "review_type",
+            "in": "query",
+            "description": "\"审核类型过滤\"",
+            "schema": {
+              "type": "[]string"
+            }
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "description": "\"分类ID过滤\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reviewer_id",
+            "in": "query",
+            "description": "\"审核员ID过滤\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "\"页码\" default(1)",
+            "schema": {
+              "type": "int"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "\"每页数量\" default(20)",
+            "schema": {
+              "type": "int"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "description": "\"排序字段\" default(\"submitted_for_review_at\")",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "description": "\"排序方向\" default(\"DESC\")",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/reviews/review": {
+      "post": {
+        "tags": [
+          "插件审核"
+        ],
+        "summary": "审核插件",
+        "description": "对插件进行审核",
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "\"审核请求\"",
+            "required": true,
+            "schema": {
+              "type": "models.ReviewRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/reviews/stats": {
+      "get": {
+        "tags": [
+          "插件审核"
+        ],
+        "summary": "获取审核统计",
+        "description": "获取插件审核的统计信息",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/reviews/workload": {
+      "get": {
+        "tags": [
+          "插件审核"
+        ],
+        "summary": "获取审核员工作负载",
+        "description": "获取审核员的工作负载统计",
+        "parameters": [
+          {
+            "name": "reviewer_id",
+            "in": "query",
+            "description": "\"审核员ID\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "description": "\"开始日期\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "description": "\"结束日期\"",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/reviews/{id}/assign": {
+      "post": {
+        "tags": [
+          "插件审核"
+        ],
+        "summary": "分配审核员",
+        "description": "为插件分配审核员",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "\"插件ID\"",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "request",
+            "in": "body",
+            "description": "\"分配审核员请求\"",
+            "required": true,
+            "schema": {
+              "type": "AssignReviewerRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/reviews/{id}/auto": {
+      "post": {
+        "tags": [
+          "插件审核"
+        ],
+        "summary": "自动审核插件",
+        "description": "对插件进行自动审核",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "\"插件ID\"",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/reviews/{id}/history": {
+      "get": {
+        "tags": [
+          "插件审核"
+        ],
+        "summary": "获取插件审核历史",
+        "description": "获取指定插件的审核历史记录",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "\"插件ID\"",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/developer/appeals": {
+      "post": {
+        "tags": [
+          "插件申诉"
+        ],
+        "summary": "创建申诉",
+        "description": "开发者创建插件审核申诉",
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "description": "\"申诉请求\"",
+            "required": true,
+            "schema": {
+              "type": "models.AppealRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reviewer/reviews": {
+      "get": {
+        "tags": [
+          "插件审核"
+        ],
+        "summary": "获取我的审核任务",
+        "description": "获取当前审核员的审核任务列表",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "\"状态过滤\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "\"页码\" default(1)",
+            "schema": {
+              "type": "int"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "\"每页数量\" default(20)",
+            "schema": {
+              "type": "int"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AdminAuthResponse": {
+        "type": "object",
+        "properties": {
+          "expires_at": {
+            "type": "integer"
+          },
+          "token": {
+            "type": "string"
+          },
+          "user": {
+            "type": "object"
+          }
+        }
+      },
+      "AdminAuthService": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          }
+        }
+      },
+      "AdminLoginRequest": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "remember": {
+            "type": "boolean"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "AdminPluginHandler": {
+        "type": "object",
+        "properties": {
+          "adminPluginService": {
+            "type": "object"
+          }
+        }
+      },
+      "AdminPluginService": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          },
+          "marketplaceClient": {
+            "type": "object"
+          }
+        }
+      },
+      "AdminUser": {
+        "type": "object"
+      },
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AppealListParams": {
+        "type": "object",
+        "properties": {
+          "date_from": {
+            "type": "object"
+          },
+          "date_to": {
+            "type": "object"
+          },
+          "developer_id": {
+            "type": "object"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "plugin_id": {
+            "type": "object"
+          },
+          "sort_by": {
+            "type": "string"
+          },
+          "sort_order": {
+            "type": "string"
+          },
+          "status": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AppealProcessRequest": {
+        "type": "object",
+        "properties": {
+          "admin_reply": {
+            "type": "string"
+          },
+          "appeal_id": {
+            "type": "object"
+          },
+          "approved": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AppealRequest": {
+        "type": "object",
+        "properties": {
+          "appeal_reason": {
+            "type": "string"
+          },
+          "appeal_type": {
+            "type": "string"
+          },
+          "plugin_id": {
+            "type": "object"
+          },
+          "review_id": {
+            "type": "object"
+          }
+        }
+      },
+      "AssignPermissionsRequest": {
+        "type": "object",
+        "properties": {
+          "permission_ids": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "AssignRoleRequest": {
+        "type": "object",
+        "properties": {
+          "role_ids": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "user_id": {
+            "type": "object"
+          }
+        }
+      },
+      "AuditLog": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "ip_address": {
+            "type": "string"
+          },
+          "new_data": {
+            "type": "string"
+          },
+          "old_data": {
+            "type": "string"
+          },
+          "target_id": {
+            "type": "object"
+          },
+          "target_type": {
+            "type": "string"
+          },
+          "user_agent": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "object"
+          }
+        }
+      },
+      "AuditService": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          }
+        }
+      },
+      "AuthHandler": {
+        "type": "object",
+        "properties": {
+          "adminAuthService": {
+            "type": "object"
+          },
+          "cfg": {
+            "type": "object"
+          },
+          "jwtManager": {
+            "type": "object"
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "expires_at": {
+            "type": "integer"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "user": {
+            "type": "object"
+          }
+        }
+      },
+      "AuthService": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          }
+        }
+      },
+      "AutoReviewLog": {
+        "type": "object",
+        "properties": {
+          "check_result": {
+            "type": "object"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "details": {
+            "type": "object"
+          },
+          "error_message": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "plugin": {
+            "type": "object"
+          },
+          "plugin_id": {
+            "type": "object"
+          },
+          "review_type": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number"
+          }
+        }
+      },
+      "BasicPermission": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "isSystem": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          }
+        }
+      },
+      "BasicPermissionCreateRequest": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          }
+        }
+      },
+      "BasicPermissionUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          }
+        }
+      },
+      "BatchDeleteRequest": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "BatchReviewRequest": {
+        "type": "object",
+        "properties": {
+          "plugin_ids": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "review_checklist": {
+            "type": "object"
+          },
+          "review_notes": {
+            "type": "string"
+          },
+          "review_result": {
+            "type": "object"
+          }
+        }
+      },
+      "BlogSearchParams": {
+        "type": "object",
+        "properties": {
+          "category_id": {
+            "type": "object"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "query": {
+            "type": "string"
+          },
+          "sort_by": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "object"
+          }
+        }
+      },
+      "CachedPermissionResult": {
+        "type": "object",
+        "properties": {
+          "cached_at": {
+            "type": "object"
+          },
+          "expires_at": {
+            "type": "object"
+          },
+          "has_permission": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "color": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "plugin_count": {
+            "type": "integer"
+          },
+          "sort_order": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": "object"
+          }
+        }
+      },
+      "CategoryHandler": {
+        "type": "object",
+        "properties": {
+          "categoryService": {
+            "type": "object"
+          }
+        }
+      },
+      "CategoryService": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          }
+        }
+      },
+      "CategoryStats": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "post_count": {
+            "type": "integer"
+          }
+        }
+      },
+      "ChangePasswordRequest": {
+        "type": "object",
+        "properties": {
+          "new_password": {
+            "type": "string"
+          },
+          "old_password": {
+            "type": "string"
+          }
+        }
+      },
+      "CodeSearchParams": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "query": {
+            "type": "string"
+          },
+          "sort_by": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "object"
+          }
+        }
+      },
+      "CommunityHandler": {
+        "type": "object",
+        "properties": {
+          "communityService": {
+            "type": "object"
+          }
+        }
+      },
+      "CommunityService": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          }
+        }
+      },
+      "CommunityStats": {
+        "type": "object",
+        "properties": {
+          "active_users": {
+            "type": "integer"
+          },
+          "popular_categories": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "recent_posts": {
+            "type": "integer"
+          },
+          "total_blog_posts": {
+            "type": "integer"
+          },
+          "total_code_snippets": {
+            "type": "integer"
+          },
+          "total_forum_posts": {
+            "type": "integer"
+          },
+          "total_forum_replies": {
+            "type": "integer"
+          },
+          "total_likes": {
+            "type": "integer"
+          },
+          "total_users": {
+            "type": "integer"
+          }
+        }
+      },
+      "CompleteMigrator": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          },
+          "migrationsPath": {
+            "type": "string"
+          }
+        }
+      },
+      "Config": {
+        "type": "object",
+        "properties": {
+          "log": {
+            "type": "object"
+          },
+          "security": {
+            "type": "object"
+          },
+          "server": {
+            "type": "object"
+          },
+          "storage": {
+            "type": "object"
+          }
+        }
+      },
+      "ConfigChangeEvent": {
+        "type": "object",
+        "properties": {
+          "environment": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "newValue": {
+            "type": "object"
+          },
+          "oldValue": {
+            "type": "object"
+          },
+          "service": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          }
+        }
+      },
+      "ConfigHandler": {
+        "type": "object",
+        "properties": {
+          "logger": {
+            "type": "object"
+          },
+          "storage": {
+            "type": "object"
+          }
+        }
+      },
+      "ConfigItem": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "object"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "environment": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "object"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "value": {
+            "type": "object"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "ConfigQuery": {
+        "type": "object",
+        "properties": {
+          "environment": {
+            "type": "string"
+          },
+          "keyPattern": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "service": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "object"
+          }
+        }
+      },
+      "CreateIconRequest": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "icon_data": {
+            "type": "string"
+          },
+          "icon_type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CreateReviewRequest": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "number"
+          }
+        }
+      },
+      "DBConfig": {
+        "type": "object",
+        "properties": {
+          "dbname": {
+            "type": "string"
+          },
+          "host": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer"
+          },
+          "sslmode": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          }
+        }
+      },
+      "Developer": {
+        "type": "object",
+        "properties": {
+          "company_name": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_verified": {
+            "type": "boolean"
+          },
+          "updated_at": {
+            "type": "object"
+          },
+          "user": {
+            "type": "object"
+          },
+          "user_id": {
+            "type": "object"
+          },
+          "website": {
+            "type": "string"
+          }
+        }
+      },
+      "DeveloperAppeal": {
+        "type": "object",
+        "properties": {
+          "admin": {
+            "type": "object"
+          },
+          "admin_id": {
+            "type": "object"
+          },
+          "admin_reply": {
+            "type": "string"
+          },
+          "appeal_reason": {
+            "type": "string"
+          },
+          "appeal_status": {
+            "type": "string"
+          },
+          "appeal_type": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "developer": {
+            "type": "object"
+          },
+          "developer_id": {
+            "type": "object"
+          },
+          "id": {
+            "type": "object"
+          },
+          "plugin": {
+            "type": "object"
+          },
+          "plugin_id": {
+            "type": "object"
+          },
+          "processed_at": {
+            "type": "object"
+          },
+          "review": {
+            "type": "object"
+          },
+          "review_id": {
+            "type": "object"
+          },
+          "updated_at": {
+            "type": "object"
+          }
+        }
+      },
+      "DeveloperHandler": {
+        "type": "object",
+        "properties": {
+          "developerService": {
+            "type": "object"
+          }
+        }
+      },
+      "DeveloperService": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          }
+        }
+      },
+      "DeveloperStats": {
+        "type": "object",
+        "properties": {
+          "active_plugins": {
+            "type": "integer"
+          },
+          "average_rating": {
+            "type": "number"
+          },
+          "total_downloads": {
+            "type": "integer"
+          },
+          "total_plugins": {
+            "type": "integer"
+          },
+          "total_revenue": {
+            "type": "number"
+          },
+          "total_reviews": {
+            "type": "integer"
+          }
+        }
+      },
+      "DeviceTypeModel": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sort_order": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": "object"
+          }
+        }
+      },
+      "DeviceTypeRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sort_order": {
+            "type": "integer"
+          }
+        }
+      },
+      "ExtendedPermission": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "device_type": {
+            "type": "object"
+          },
+          "device_type_id": {
+            "type": "object"
+          },
+          "element_code": {
+            "type": "string"
+          },
+          "element_type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "module": {
+            "type": "object"
+          },
+          "module_id": {
+            "type": "object"
+          },
+          "resource": {
+            "type": "string"
+          }
+        }
+      },
+      "ExtendedPermissionRequest": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "device_type_id": {
+            "type": "object"
+          },
+          "module_id": {
+            "type": "object"
+          },
+          "resource": {
+            "type": "string"
+          }
+        }
+      },
+      "ExtendedPermissionWithDetails": {
+        "type": "object",
+        "properties": {
+          "device_type_name": {
+            "type": "string"
+          },
+          "module_name": {
+            "type": "string"
+          }
+        }
+      },
+      "ExtendedPlugin": {
+        "type": "object",
+        "properties": {
+          "author": {
+            "type": "string"
+          },
+          "banner_url": {
+            "type": "string"
+          },
+          "binary_path": {
+            "type": "string"
+          },
+          "category": {
+            "type": "object"
+          },
+          "category_id": {
+            "type": "object"
+          },
+          "changelog": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": "string"
+          },
+          "developer_id": {
+            "type": "object"
+          },
+          "docker_image": {
+            "type": "string"
+          },
+          "download_count": {
+            "type": "integer"
+          },
+          "entry_point": {
+            "type": "string"
+          },
+          "exported_symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "grpc_proto_file": {
+            "type": "string"
+          },
+          "health_check_path": {
+            "type": "string"
+          },
+          "icon_url": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "interface_spec": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_featured": {
+            "type": "boolean"
+          },
+          "is_free": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "namespace": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "rating": {
+            "type": "number"
+          },
+          "requirements": {
+            "type": "string"
+          },
+          "resource_limits": {
+            "type": "string"
+          },
+          "review_count": {
+            "type": "integer"
+          },
+          "runtime": {
+            "type": "object"
+          },
+          "runtime_config": {
+            "type": "string"
+          },
+          "screenshots": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "security_policy": {
+            "type": "string"
+          },
+          "service_endpoint": {
+            "type": "string"
+          },
+          "service_port": {
+            "type": "integer"
+          },
+          "short_description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "object"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "type": {
+            "type": "object"
+          },
+          "updated_at": {
+            "type": "object"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "ExtendedPluginHandler": {
+        "type": "object",
+        "properties": {
+          "categoryService": {
+            "type": "object"
+          },
+          "extendedPluginService": {
+            "type": "object"
+          }
+        }
+      },
+      "ExtendedPluginService": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          },
+          "gateway": {
+            "type": "object"
+          },
+          "inProcessManager": {
+            "type": "object"
+          },
+          "logger": {
+            "type": "object"
+          },
+          "microserviceManager": {
+            "type": "object"
+          }
+        }
+      },
+      "FileConfig": {
+        "type": "object",
+        "properties": {
+          "basePath": {
+            "type": "string"
+          },
+          "watchDir": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FileStorage": {
+        "type": "object",
+        "properties": {
+          "basePath": {
+            "type": "string"
+          },
+          "logger": {
+            "type": "object"
+          },
+          "mutex": {
+            "type": "object"
+          },
+          "watcher": {
+            "type": "object"
+          },
+          "watchers": {
+            "type": "object"
+          }
+        }
+      },
+      "ForumSearchParams": {
+        "type": "object",
+        "properties": {
+          "category_id": {
+            "type": "object"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "query": {
+            "type": "string"
+          },
+          "sort_by": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "object"
+          }
+        }
+      },
+      "GatewayRequest": {
+        "type": "object",
+        "properties": {
+          "client_type": {
+            "type": "object"
+          },
+          "context": {
+            "type": "object"
+          },
+          "headers": {
+            "type": "object"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object"
+          },
+          "plugin_id": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          }
+        }
+      },
+      "GatewayResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "duration": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "GoPluginLoader": {
+        "type": "object",
+        "properties": {
+          "logger": {
+            "type": "object"
+          },
+          "mutex": {
+            "type": "object"
+          },
+          "plugins": {
+            "type": "object"
+          }
+        }
+      },
+      "Icon": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "icon_data": {
+            "type": "string"
+          },
+          "icon_type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "object"
+          },
+          "updated_at": {
+            "type": "object"
+          }
+        }
+      },
+      "IconCategory": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          }
+        }
+      },
+      "IconHandler": {
+        "type": "object",
+        "properties": {
+          "iconService": {
+            "type": "object"
+          }
+        }
+      },
+      "IconSearchParams": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "icon_type": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "keyword": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          }
+        }
+      },
+      "IconService": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          }
+        }
+      },
+      "IconStats": {
+        "type": "object",
+        "properties": {
+          "active_icons": {
+            "type": "integer"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "icon_types": {
+            "type": "object"
+          },
+          "inactive_icons": {
+            "type": "integer"
+          },
+          "total_icons": {
+            "type": "integer"
+          }
+        }
+      },
+      "ImportResult": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "failed": {
+            "type": "integer"
+          },
+          "success": {
+            "type": "integer"
+          }
+        }
+      },
+      "JSPluginLoader": {
+        "type": "object",
+        "properties": {
+          "logger": {
+            "type": "object"
+          },
+          "mutex": {
+            "type": "object"
+          },
+          "plugins": {
+            "type": "object"
+          }
+        }
+      },
+      "JSPluginWrapper": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "loader": {
+            "type": "object"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "path": {
+            "type": "string"
+          }
+        }
+      },
+      "JWTClaims": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "user_id": {
+            "type": "object"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "JWTKey": {
+        "type": "object",
+        "properties": {
+          "KeyHash": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "expires_at": {
+            "type": "object"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "JWTKeyService": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          }
+        }
+      },
+      "LicenseInfo": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "expiryDate": {
+            "type": "string"
+          },
+          "isValid": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "LoadedGoPlugin": {
+        "type": "object",
+        "properties": {
+          "Config": {
+            "type": "object"
+          },
+          "ID": {
+            "type": "string"
+          },
+          "Instance": {
+            "type": "object"
+          },
+          "LoadTime": {
+            "type": "object"
+          },
+          "Plugin": {
+            "type": "object"
+          }
+        }
+      },
+      "LoadedJSPlugin": {
+        "type": "object",
+        "properties": {
+          "Config": {
+            "type": "object"
+          },
+          "ID": {
+            "type": "string"
+          },
+          "LoadTime": {
+            "type": "object"
+          },
+          "Metadata": {
+            "type": "object"
+          },
+          "Path": {
+            "type": "string"
+          }
+        }
+      },
+      "LogConfig": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          },
+          "output": {
+            "type": "string"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "remember": {
+            "type": "boolean"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "MarketplaceAuthHandler": {
+        "type": "object",
+        "properties": {
+          "authService": {
+            "type": "object"
+          },
+          "cfg": {
+            "type": "object"
+          },
+          "jwtManager": {
+            "type": "object"
+          }
+        }
+      },
+      "MarketplaceClient": {
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "type": "string"
+          },
+          "baseURL": {
+            "type": "string"
+          },
+          "httpClient": {
+            "type": "object"
+          }
+        }
+      },
+      "MarketplaceUser": {
+        "type": "object",
+        "properties": {
+          "EmailVerificationToken": {
+            "type": "string"
+          },
+          "PasswordResetExpiresAt": {
+            "type": "object"
+          },
+          "PasswordResetToken": {
+            "type": "string"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "is_email_verified": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Menu": {
+        "type": "object",
+        "properties": {
+          "children": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "component": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "custom_icon": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "device_types": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_favorite": {
+            "type": "boolean"
+          },
+          "is_hidden": {
+            "type": "boolean"
+          },
+          "keywords": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "parent": {
+            "type": "object"
+          },
+          "parent_id": {
+            "type": "object"
+          },
+          "path": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "string"
+          },
+          "sort_order": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "object"
+          }
+        }
+      },
+      "MenuBatchOperationRequest": {
+        "type": "object",
+        "properties": {
+          "menu_ids": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "operation": {
+            "type": "string"
+          }
+        }
+      },
+      "MenuBatchUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "menu_ids": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "updates": {
+            "type": "object"
+          }
+        }
+      },
+      "MenuConfig": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "type": "object"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "device_type": {
+            "type": "object"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "object"
+          }
+        }
+      },
+      "MenuCreateRequest": {
+        "type": "object",
+        "properties": {
+          "component": {
+            "type": "string"
+          },
+          "custom_icon": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "device_types": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "is_favorite": {
+            "type": "boolean"
+          },
+          "is_hidden": {
+            "type": "boolean"
+          },
+          "keywords": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": "object"
+          },
+          "path": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "string"
+          },
+          "sort_order": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "MenuDragSortRequest": {
+        "type": "object",
+        "properties": {
+          "menu_id": {
+            "type": "object"
+          },
+          "new_parent_id": {
+            "type": "object"
+          },
+          "new_sort_order": {
+            "type": "integer"
+          },
+          "position": {
+            "type": "string"
+          },
+          "target_menu_id": {
+            "type": "object"
+          }
+        }
+      },
+      "MenuHandler": {
+        "type": "object",
+        "properties": {
+          "menuService": {
+            "type": "object"
+          }
+        }
+      },
+      "MenuMoveRequest": {
+        "type": "object",
+        "properties": {
+          "target_index": {
+            "type": "integer"
+          },
+          "target_parent_id": {
+            "type": "object"
+          }
+        }
+      },
+      "MenuSearchParams": {
+        "type": "object",
+        "properties": {
+          "DeviceType": {
+            "type": "string"
+          },
+          "IsFavorite": {
+            "type": "boolean"
+          },
+          "IsHidden": {
+            "type": "boolean"
+          },
+          "Keywords": {
+            "type": "string"
+          },
+          "Page": {
+            "type": "integer"
+          },
+          "PageSize": {
+            "type": "integer"
+          },
+          "ParentID": {
+            "type": "string"
+          },
+          "Path": {
+            "type": "string"
+          },
+          "Search": {
+            "type": "string"
+          },
+          "Title": {
+            "type": "string"
+          },
+          "TreeMode": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MenuService": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          }
+        }
+      },
+      "MenuStats": {
+        "type": "object",
+        "properties": {
+          "hidden_menus": {
+            "type": "integer"
+          },
+          "max_depth": {
+            "type": "integer"
+          },
+          "total_menus": {
+            "type": "integer"
+          },
+          "visible_menus": {
+            "type": "integer"
+          }
+        }
+      },
+      "MenuTreeNode": {
+        "type": "object",
+        "properties": {
+          "children": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "MenuUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "component": {
+            "type": "string"
+          },
+          "custom_icon": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "device_types": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "is_favorite": {
+            "type": "boolean"
+          },
+          "is_hidden": {
+            "type": "boolean"
+          },
+          "keywords": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": "object"
+          },
+          "path": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "string"
+          },
+          "sort_order": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "Metrics": {
+        "type": "object",
+        "properties": {
+          "cpuUsage": {
+            "type": "number"
+          },
+          "diskUsage": {
+            "type": "number"
+          },
+          "memoryUsage": {
+            "type": "number"
+          }
+        }
+      },
+      "MicroservicePlugin": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "type": "object"
+          },
+          "container_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "docker_image": {
+            "type": "string"
+          },
+          "grpc_proto_file": {
+            "type": "string"
+          },
+          "health_check_path": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "service_endpoint": {
+            "type": "string"
+          },
+          "service_port": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "object"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "MicroservicePluginManager": {
+        "type": "object",
+        "properties": {
+          "dockerClient": {
+            "type": "object"
+          },
+          "logger": {
+            "type": "object"
+          },
+          "mutex": {
+            "type": "object"
+          },
+          "networkName": {
+            "type": "string"
+          },
+          "plugins": {
+            "type": "object"
+          }
+        }
+      },
+      "MigrationRecord": {
+        "type": "object",
+        "properties": {
+          "Checksum": {
+            "type": "string"
+          },
+          "ExecutedAt": {
+            "type": "object"
+          },
+          "Name": {
+            "type": "string"
+          },
+          "Success": {
+            "type": "boolean"
+          },
+          "Version": {
+            "type": "string"
+          }
+        }
+      },
+      "Migrator": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          },
+          "migrationsPath": {
+            "type": "string"
+          }
+        }
+      },
+      "Module": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sort_order": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": "object"
+          }
+        }
+      },
+      "ModuleRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sort_order": {
+            "type": "integer"
+          }
+        }
+      },
+      "PaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "total_pages": {
+            "type": "integer"
+          }
+        }
+      },
+      "PaginationParams": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          }
+        }
+      },
+      "Permission": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "name": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          }
+        }
+      },
+      "PermissionCache": {
+        "type": "object",
+        "properties": {
+          "client": {
+            "type": "object"
+          }
+        }
+      },
+      "PermissionHandler": {
+        "type": "object",
+        "properties": {
+          "permissionService": {
+            "type": "object"
+          }
+        }
+      },
+      "PermissionInheritance": {
+        "type": "object",
+        "properties": {
+          "child_extended_perm_id": {
+            "type": "object"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "id": {
+            "type": "object"
+          },
+          "inheritance_type": {
+            "type": "string"
+          },
+          "parent_extended_perm_id": {
+            "type": "object"
+          }
+        }
+      },
+      "PermissionMiddleware": {
+        "type": "object",
+        "properties": {
+          "permissionService": {
+            "type": "object"
+          }
+        }
+      },
+      "PermissionQueryParams": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "isSystem": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "resource": {
+            "type": "string"
+          },
+          "search": {
+            "type": "string"
+          }
+        }
+      },
+      "PermissionService": {
+        "type": "object",
+        "properties": {
+          "cache": {
+            "type": "object"
+          },
+          "db": {
+            "type": "object"
+          }
+        }
+      },
+      "PermissionSpec": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "module": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          }
+        }
+      },
+      "PermissionStats": {
+        "type": "object",
+        "properties": {
+          "byAction": {
+            "type": "object"
+          },
+          "byResource": {
+            "type": "object"
+          },
+          "customPermissions": {
+            "type": "integer"
+          },
+          "mostUsed": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "recentlyCreated": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "systemPermissions": {
+            "type": "integer"
+          },
+          "totalPermissions": {
+            "type": "integer"
+          }
+        }
+      },
+      "PermissionSyncRequest": {
+        "type": "object",
+        "properties": {
+          "device_type": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "object"
+          }
+        }
+      },
+      "PermissionSyncResponse": {
+        "type": "object",
+        "properties": {
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "timestamp": {
+            "type": "object"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "PermissionTemplate": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_system": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "template_data": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "object"
+          }
+        }
+      },
+      "PermissionTemplateRequest": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "template_data": {
+            "type": "string"
+          }
+        }
+      },
+      "PermissionUsageResponse": {
+        "type": "object",
+        "properties": {
+          "isUsed": {
+            "type": "boolean"
+          },
+          "usedByRoles": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "usedByUsers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "Plugin": {
+        "type": "object",
+        "properties": {
+          "appeal_count": {
+            "type": "integer"
+          },
+          "author": {
+            "type": "string"
+          },
+          "auto_review_result": {
+            "type": "string"
+          },
+          "auto_review_score": {
+            "type": "number"
+          },
+          "category": {
+            "type": "object"
+          },
+          "category_id": {
+            "type": "object"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "downloads": {
+            "type": "integer"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_featured": {
+            "type": "boolean"
+          },
+          "last_appeal_at": {
+            "type": "object"
+          },
+          "latest_version": {
+            "type": "object"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "rating": {
+            "type": "number"
+          },
+          "rejection_reason": {
+            "type": "string"
+          },
+          "review_count": {
+            "type": "integer"
+          },
+          "review_notes": {
+            "type": "string"
+          },
+          "review_priority": {
+            "type": "string"
+          },
+          "review_status": {
+            "type": "string"
+          },
+          "reviewed_at": {
+            "type": "object"
+          },
+          "reviewer": {
+            "type": "object"
+          },
+          "reviewer_id": {
+            "type": "object"
+          },
+          "reviews": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "screenshots": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "submitted_for_review_at": {
+            "type": "object"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "updated_at": {
+            "type": "object"
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "PluginCallLog": {
+        "type": "object",
+        "properties": {
+          "client_ip": {
+            "type": "string"
+          },
+          "client_type": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "duration": {
+            "type": "integer"
+          },
+          "error_msg": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "input_data": {
+            "type": "string"
+          },
+          "instance_id": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "output_data": {
+            "type": "string"
+          },
+          "plugin_id": {
+            "type": "object"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "user_agent": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "object"
+          }
+        }
+      },
+      "PluginCallRequest": {
+        "type": "object",
+        "properties": {
+          "client_ip": {
+            "type": "string"
+          },
+          "client_type": {
+            "type": "string"
+          },
+          "context": {
+            "type": "object"
+          },
+          "input_data": {
+            "type": "object"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object"
+          },
+          "plugin_id": {
+            "type": "string"
+          },
+          "user_agent": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "object"
+          }
+        }
+      },
+      "PluginCallResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "duration": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PluginContext": {
+        "type": "object",
+        "properties": {
+          "client_type": {
+            "type": "string"
+          },
+          "headers": {
+            "type": "object"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "timeout": {
+            "type": "object"
+          },
+          "user_id": {
+            "type": "string"
+          }
+        }
+      },
+      "PluginDependency": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "object"
+          },
+          "dependency_id": {
+            "type": "object"
+          },
+          "dependency_type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_optional": {
+            "type": "boolean"
+          },
+          "max_version": {
+            "type": "string"
+          },
+          "min_version": {
+            "type": "string"
+          },
+          "plugin_id": {
+            "type": "object"
+          }
+        }
+      },
+      "PluginGateway": {
+        "type": "object",
+        "properties": {
+          "inProcessManager": {
+            "type": "object"
+          },
+          "logger": {
+            "type": "object"
+          },
+          "microserviceManager": {
+            "type": "object"
+          },
+          "middleware": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "mutex": {
+            "type": "object"
+          },
+          "routes": {
+            "type": "object"
+          }
+        }
+      },
+      "PluginHandler": {
+        "type": "object",
+        "properties": {
+          "pluginService": {
+            "type": "object"
+          }
+        }
+      },
+      "PluginInfo": {
+        "type": "object",
+        "properties": {
+          "author": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "PluginInstance": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "error_msg": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "instance_id": {
+            "type": "string"
+          },
+          "last_ping": {
+            "type": "object"
+          },
+          "plugin_id": {
+            "type": "object"
+          },
+          "status": {
+            "type": "object"
+          },
+          "updated_at": {
+            "type": "object"
+          },
+          "user_id": {
+            "type": "object"
+          }
+        }
+      },
+      "PluginInterface": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "input_schema": {
+            "type": "string"
+          },
+          "methods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "output_schema": {
+            "type": "string"
+          },
+          "plugin_id": {
+            "type": "object"
+          },
+          "updated_at": {
+            "type": "object"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "PluginLoaderManager": {
+        "type": "object",
+        "properties": {
+          "goLoader": {
+            "type": "object"
+          },
+          "jsLoader": {
+            "type": "object"
+          },
+          "logger": {
+            "type": "object"
+          }
+        }
+      },
+      "PluginMetrics": {
+        "type": "object",
+        "properties": {
+          "avg_duration": {
+            "type": "number"
+          },
+          "call_count": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "date": {
+            "type": "object"
+          },
+          "error_count": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "object"
+          },
+          "max_duration": {
+            "type": "integer"
+          },
+          "min_duration": {
+            "type": "integer"
+          },
+          "plugin_id": {
+            "type": "object"
+          },
+          "success_count": {
+            "type": "integer"
+          },
+          "total_duration": {
+            "type": "integer"
+          },
+          "unique_users": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": "object"
+          }
+        }
+      },
+      "PluginResult": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "duration": {
+            "type": "object"
+          },
+          "error": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PluginReview": {
+        "type": "object",
+        "properties": {
+          "auto_review_data": {
+            "type": "object"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "id": {
+            "type": "object"
+          },
+          "new_status": {
+            "type": "string"
+          },
+          "plugin": {
+            "type": "object"
+          },
+          "plugin_id": {
+            "type": "object"
+          },
+          "previous_status": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "object"
+          },
+          "review_checklist": {
+            "type": "object"
+          },
+          "review_notes": {
+            "type": "string"
+          },
+          "review_result": {
+            "type": "object"
+          },
+          "review_type": {
+            "type": "object"
+          },
+          "reviewer": {
+            "type": "object"
+          },
+          "reviewer_id": {
+            "type": "object"
+          },
+          "updated_at": {
+            "type": "object"
+          }
+        }
+      },
+      "PluginReviewHandler": {
+        "type": "object",
+        "properties": {
+          "reviewService": {
+            "type": "object"
+          }
+        }
+      },
+      "PluginReviewService": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          }
+        }
+      },
+      "PluginSearchParams": {
+        "type": "object",
+        "properties": {
+          "CategoryID": {
+            "type": "object"
+          },
+          "Featured": {
+            "type": "boolean"
+          },
+          "Free": {
+            "type": "boolean"
+          },
+          "MaxPrice": {
+            "type": "number"
+          },
+          "MinPrice": {
+            "type": "number"
+          },
+          "MinRating": {
+            "type": "number"
+          },
+          "Page": {
+            "type": "integer"
+          },
+          "PageSize": {
+            "type": "integer"
+          },
+          "Query": {
+            "type": "string"
+          },
+          "Runtime": {
+            "type": "object"
+          },
+          "SortBy": {
+            "type": "string"
+          },
+          "SortOrder": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "object"
+          },
+          "Type": {
+            "type": "object"
+          }
+        }
+      },
+      "PluginService": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          }
+        }
+      },
+      "PluginVersion": {
+        "type": "object",
+        "properties": {
+          "changelog": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "download_url": {
+            "type": "string"
+          },
+          "downloads": {
+            "type": "integer"
+          },
+          "file_size": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_stable": {
+            "type": "boolean"
+          },
+          "max_version": {
+            "type": "string"
+          },
+          "min_version": {
+            "type": "string"
+          },
+          "plugin_id": {
+            "type": "object"
+          },
+          "updated_at": {
+            "type": "object"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "PluginVersionReview": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "object"
+          },
+          "id": {
+            "type": "object"
+          },
+          "plugin": {
+            "type": "object"
+          },
+          "plugin_id": {
+            "type": "object"
+          },
+          "review": {
+            "type": "object"
+          },
+          "review_id": {
+            "type": "object"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "Purchase": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "object"
+          },
+          "id": {
+            "type": "object"
+          },
+          "plugin": {
+            "type": "object"
+          },
+          "plugin_id": {
+            "type": "object"
+          },
+          "price": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "object"
+          },
+          "user": {
+            "type": "object"
+          },
+          "user_id": {
+            "type": "object"
+          }
+        }
+      },
+      "RateLimitConfig": {
+        "type": "object",
+        "properties": {
+          "burst_size": {
+            "type": "integer"
+          },
+          "requests_per_second": {
+            "type": "integer"
+          },
+          "window_size": {
+            "type": "object"
+          }
+        }
+      },
+      "RateLimitHandler": {
+        "type": "object",
+        "properties": {
+          "redisClient": {
+            "type": "object"
+          }
+        }
+      },
+      "RateLimitMiddleware": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "type": "object"
+          },
+          "redisClient": {
+            "type": "object"
+          }
+        }
+      },
+      "RateLimitStats": {
+        "type": "object",
+        "properties": {
+          "active_limits": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "top_limited_ips": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "top_limited_users": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "total_keys": {
+            "type": "integer"
+          }
+        }
+      },
+      "RateLimitStatus": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "type": "integer"
+          },
+          "key": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "remaining": {
+            "type": "integer"
+          },
+          "reset_time": {
+            "type": "integer"
+          }
+        }
+      },
+      "RedisConfig": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "integer"
+          },
+          "host": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer"
+          }
+        }
+      },
+      "RefreshTokenRequest": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "RegisterDeveloperRequest": {
+        "type": "object",
+        "properties": {
+          "company_name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "properties": {
+          "confirm_password": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "ResetPasswordRequest": {
+        "type": "object",
+        "properties": {
+          "new_password": {
+            "type": "string"
+          }
+        }
+      },
+      "Review": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "id": {
+            "type": "object"
+          },
+          "plugin_id": {
+            "type": "object"
+          },
+          "rating": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": "object"
+          },
+          "user": {
+            "type": "object"
+          },
+          "user_id": {
+            "type": "object"
+          }
+        }
+      },
+      "ReviewConfig": {
+        "type": "object",
+        "properties": {
+          "config_key": {
+            "type": "string"
+          },
+          "config_value": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "updated_at": {
+            "type": "object"
+          }
+        }
+      },
+      "ReviewHandler": {
+        "type": "object",
+        "properties": {
+          "reviewService": {
+            "type": "object"
+          }
+        }
+      },
+      "ReviewQueueParams": {
+        "type": "object",
+        "properties": {
+          "category_id": {
+            "type": "object"
+          },
+          "date_from": {
+            "type": "object"
+          },
+          "date_to": {
+            "type": "object"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "priority": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "review_type": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "reviewer_id": {
+            "type": "object"
+          },
+          "sort_by": {
+            "type": "string"
+          },
+          "sort_order": {
+            "type": "string"
+          },
+          "status": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "ReviewRequest": {
+        "type": "object",
+        "properties": {
+          "plugin_id": {
+            "type": "object"
+          },
+          "review_checklist": {
+            "type": "object"
+          },
+          "review_notes": {
+            "type": "string"
+          },
+          "review_result": {
+            "type": "object"
+          }
+        }
+      },
+      "ReviewService": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          }
+        }
+      },
+      "ReviewStats": {
+        "type": "object",
+        "properties": {
+          "average_rating": {
+            "type": "number"
+          },
+          "five_star": {
+            "type": "integer"
+          },
+          "four_star": {
+            "type": "integer"
+          },
+          "one_star": {
+            "type": "integer"
+          },
+          "three_star": {
+            "type": "integer"
+          },
+          "total_reviews": {
+            "type": "integer"
+          },
+          "two_star": {
+            "type": "integer"
+          }
+        }
+      },
+      "ReviewTemplate": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "object"
+          },
+          "category_id": {
+            "type": "object"
+          },
+          "checklist": {
+            "type": "object"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "created_by": {
+            "type": "object"
+          },
+          "creator": {
+            "type": "object"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "template_name": {
+            "type": "string"
+          },
+          "template_type": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "object"
+          }
+        }
+      },
+      "ReviewTrendData": {
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "integer"
+          },
+          "date": {
+            "type": "object"
+          },
+          "rejected": {
+            "type": "integer"
+          },
+          "submitted": {
+            "type": "integer"
+          }
+        }
+      },
+      "ReviewerWorkload": {
+        "type": "object",
+        "properties": {
+          "average_review_time": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "date": {
+            "type": "object"
+          },
+          "id": {
+            "type": "object"
+          },
+          "reviewer": {
+            "type": "object"
+          },
+          "reviewer_id": {
+            "type": "object"
+          },
+          "reviews_assigned": {
+            "type": "integer"
+          },
+          "reviews_completed": {
+            "type": "integer"
+          },
+          "reviews_pending": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": "object"
+          }
+        }
+      },
+      "Role": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_system": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "object"
+          }
+        }
+      },
+      "RoleChangeData": {
+        "type": "object",
+        "properties": {
+          "changes": {
+            "type": "object"
+          },
+          "new_roles": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "old_roles": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "user_id": {
+            "type": "object"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "RoleChanges": {
+        "type": "object",
+        "properties": {
+          "added": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "removed": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "RoleCreateRequest": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "RoleHandler": {
+        "type": "object",
+        "properties": {
+          "roleService": {
+            "type": "object"
+          }
+        }
+      },
+      "RoleInfo": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_system": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "RoleResponse": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_system": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "updated_at": {
+            "type": "object"
+          }
+        }
+      },
+      "RoleService": {
+        "type": "object",
+        "properties": {
+          "auditService": {
+            "type": "object"
+          },
+          "db": {
+            "type": "object"
+          }
+        }
+      },
+      "RoleSummary": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "RoleUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          }
+        }
+      },
+      "RoleValidationMiddleware": {
+        "type": "object",
+        "properties": {
+          "roleService": {
+            "type": "object"
+          },
+          "userService": {
+            "type": "object"
+          }
+        }
+      },
+      "RouteConfig": {
+        "type": "object",
+        "properties": {
+          "auth_required": {
+            "type": "boolean"
+          },
+          "client_types": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "handler": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "method": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "plugin_id": {
+            "type": "string"
+          },
+          "plugin_type": {
+            "type": "string"
+          },
+          "rate_limit": {
+            "type": "object"
+          },
+          "timeout": {
+            "type": "object"
+          }
+        }
+      },
+      "SecurityConfig": {
+        "type": "object",
+        "properties": {
+          "allowedIPs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "apiKey": {
+            "type": "string"
+          },
+          "enableAuth": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Server": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "type": "object"
+          },
+          "db": {
+            "type": "object"
+          },
+          "jwtManager": {
+            "type": "object"
+          },
+          "router": {
+            "type": "object"
+          }
+        }
+      },
+      "ServerConfig": {
+        "type": "object",
+        "properties": {
+          "host": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer"
+          },
+          "readTimeout": {
+            "type": "object"
+          },
+          "writeTimeout": {
+            "type": "object"
+          }
+        }
+      },
+      "StorageConfig": {
+        "type": "object",
+        "properties": {
+          "database": {
+            "type": "object"
+          },
+          "file": {
+            "type": "object"
+          },
+          "redis": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "SyncResult": {
+        "type": "object",
+        "properties": {
+          "added": {
+            "type": "integer"
+          },
+          "removed": {
+            "type": "integer"
+          },
+          "updated": {
+            "type": "integer"
+          }
+        }
+      },
+      "SystemHandler": {
+        "type": "object",
+        "properties": {
+          "systemService": {
+            "type": "object"
+          }
+        }
+      },
+      "SystemInfo": {
+        "type": "object",
+        "properties": {
+          "architecture": {
+            "type": "string"
+          },
+          "buildTime": {
+            "type": "string"
+          },
+          "database": {
+            "type": "string"
+          },
+          "environment": {
+            "type": "string"
+          },
+          "gitCommit": {
+            "type": "string"
+          },
+          "goVersion": {
+            "type": "string"
+          },
+          "license": {
+            "type": "object"
+          },
+          "nginx": {
+            "type": "string"
+          },
+          "nodeVersion": {
+            "type": "string"
+          },
+          "os": {
+            "type": "string"
+          },
+          "redis": {
+            "type": "string"
+          },
+          "systemName": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "SystemService": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          }
+        }
+      },
+      "SystemSetting": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_public": {
+            "type": "boolean"
+          },
+          "is_sensitive": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "object"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateDeveloperRequest": {
+        "type": "object",
+        "properties": {
+          "company_name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateIconRequest": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "icon_data": {
+            "type": "string"
+          },
+          "icon_type": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "UpdateReviewRequest": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "number"
+          }
+        }
+      },
+      "UserCreateRequest": {
+        "type": "object",
+        "properties": {
+          "avatar": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "UserDevicePermission": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "object"
+          },
+          "device_type_id": {
+            "type": "object"
+          },
+          "extended_permission_id": {
+            "type": "object"
+          },
+          "grant_type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "user_id": {
+            "type": "object"
+          }
+        }
+      },
+      "UserGroup": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "object"
+          }
+        }
+      },
+      "UserGroupMember": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "object"
+          },
+          "id": {
+            "type": "object"
+          },
+          "user_group_id": {
+            "type": "object"
+          },
+          "user_id": {
+            "type": "object"
+          }
+        }
+      },
+      "UserGroupMemberRequest": {
+        "type": "object",
+        "properties": {
+          "user_group_id": {
+            "type": "object"
+          },
+          "user_ids": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "UserGroupPermission": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "object"
+          },
+          "extended_permission_id": {
+            "type": "object"
+          },
+          "id": {
+            "type": "object"
+          },
+          "user_group_id": {
+            "type": "object"
+          }
+        }
+      },
+      "UserGroupRequest": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "UserGroupWithMembers": {
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "UserHandler": {
+        "type": "object",
+        "properties": {
+          "userService": {
+            "type": "object"
+          }
+        }
+      },
+      "UserListResponse": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "UserPermissionCheckRequest": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "device_type": {
+            "type": "string"
+          },
+          "module": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "object"
+          }
+        }
+      },
+      "UserPermissionCheckResponse": {
+        "type": "object",
+        "properties": {
+          "has_permission": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "UserResponse": {
+        "type": "object",
+        "properties": {
+          "avatar": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "type": "object"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "last_login_at": {
+            "type": "object"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "updated_at": {
+            "type": "object"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "UserService": {
+        "type": "object",
+        "properties": {
+          "db": {
+            "type": "object"
+          }
+        }
+      },
+      "UserSession": {
+        "type": "object",
+        "properties": {
+          "TokenHash": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "object"
+          },
+          "expires_at": {
+            "type": "object"
+          },
+          "id": {
+            "type": "object"
+          },
+          "ip_address": {
+            "type": "string"
+          },
+          "last_used_at": {
+            "type": "object"
+          },
+          "user_agent": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "object"
+          }
+        }
+      },
+      "UserSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "object"
+          },
+          "name": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "UserUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "avatar": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "captchaEntry": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "object"
+          }
+        }
+      },
+      "marketplaceCaptchaEntry": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "description": "JWT Bearer token authentication",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
+}

@@ -1,0 +1,232 @@
+.community-page {
+  padding: 24px;
+  background: #f5f5f5;
+  min-height: calc(100vh - 64px);
+}
+
+.community-header {
+  margin-bottom: 24px;
+}
+
+.community-header .ant-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.community-page .ant-card {
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+}
+
+.community-page .ant-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.community-page .ant-list-item {
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.community-page .ant-list-item:hover {
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 0 -16px;
+}
+
+.community-page .ant-list-item-meta-title a {
+  color: #262626;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.community-page .ant-list-item-meta-title a:hover {
+  color: #1890ff;
+}
+
+.community-page .ant-statistic-title {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin-bottom: 8px;
+}
+
+.community-page .ant-statistic-content {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.community-page .ant-tabs-tab {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.community-page .ant-tabs-tab-active {
+  color: #1890ff;
+}
+
+.community-page .ant-tag {
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .community-page {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 992px) {
+  .community-page {
+    padding: 16px;
+  }
+  
+  .community-page .ant-statistic-content {
+    font-size: 20px;
+  }
+  
+  .community-page .ant-tabs-tab {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .community-page {
+    padding: 12px;
+  }
+  
+  .community-header .ant-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .community-header .ant-col:last-child {
+    text-align: left;
+  }
+  
+  .community-page .ant-list-item {
+    padding: 12px 0;
+  }
+  
+  .community-page .ant-list-item:hover {
+    margin: 0;
+    padding: 12px 0;
+    background: transparent;
+  }
+  
+  .community-page .ant-statistic-content {
+    font-size: 18px;
+  }
+  
+  .community-page .ant-card .ant-card-body {
+    padding: 16px;
+  }
+  
+  .community-page .ant-tabs-tab {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 576px) {
+  .community-page {
+    padding: 8px;
+  }
+  
+  .community-page .ant-card .ant-card-body {
+    padding: 12px;
+  }
+  
+  .community-page .ant-list-item {
+    padding: 8px 0;
+  }
+  
+  .community-page .ant-list-item-meta-avatar {
+    margin-right: 8px;
+  }
+  
+  .community-page .ant-list-item-meta-title {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  
+  .community-page .ant-list-item-meta-description {
+    font-size: 12px;
+  }
+  
+  .community-page .ant-statistic-content {
+    font-size: 16px;
+  }
+  
+  .community-page .ant-statistic-title {
+    font-size: 12px;
+  }
+  
+  .community-page .ant-tabs-tab {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+  
+  .community-page .ant-space {
+    flex-wrap: wrap;
+  }
+  
+  .community-page .ant-tag {
+    font-size: 11px;
+    padding: 0 4px;
+  }
+  
+  .community-tab-extra .desktop-only {
+    display: none;
+  }
+  
+  .community-tab-extra .mobile-only {
+    display: inline-block;
+  }
+  
+  .tab-text {
+    display: none;
+  }
+}
+
+/* 桌面端显示控制 */
+@media (min-width: 769px) {
+  .community-tab-extra .desktop-only {
+    display: inline-flex;
+  }
+  
+  .community-tab-extra .mobile-only {
+    display: none;
+  }
+  
+  .tab-text {
+    display: inline;
+    margin-left: 4px;
+  }
+}
+
+/* 深色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .community-page {
+    background: #141414;
+  }
+  
+  .community-page .ant-card {
+    background: #1f1f1f;
+    border-color: #303030;
+  }
+  
+  .community-page .ant-list-item {
+    border-bottom-color: #303030;
+  }
+  
+  .community-page .ant-list-item:hover {
+    background: #262626;
+  }
+  
+  .community-page .ant-list-item-meta-title a {
+    color: #f0f0f0;
+  }
+}

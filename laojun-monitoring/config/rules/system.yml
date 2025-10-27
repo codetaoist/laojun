@@ -1,0 +1,212 @@
+# 系统监控告警规则
+groups:
+  - name: system.rules
+    interval: 30s
+    rules:
+      # CPU 使用率告警
+      - alert: HighCPUUsage
+        expr: cpu_usage_percent > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: cpu
+          category: system
+        annotations:
+          summary: "CPU使用率过高"
+          description: "实例 {{ $labels.instance }} CPU使用率为 {{ $value }}%，已超过80%阈值持续5分钟"
+          value: "{{ $value }}%"
+          threshold: "80%"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/high-cpu"
+
+      - alert: CriticalCPUUsage
+        expr: cpu_usage_percent > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: cpu
+          category: system
+        annotations:
+          summary: "CPU使用率严重过高"
+          description: "实例 {{ $labels.instance }} CPU使用率为 {{ $value }}%，已超过95%阈值持续2分钟"
+          value: "{{ $value }}%"
+          threshold: "95%"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/critical-cpu"
+
+      # 内存使用率告警
+      - alert: HighMemoryUsage
+        expr: memory_usage_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: memory
+          category: system
+        annotations:
+          summary: "内存使用率过高"
+          description: "实例 {{ $labels.instance }} 内存使用率为 {{ $value }}%，已超过85%阈值持续5分钟"
+          value: "{{ $value }}%"
+          threshold: "85%"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/high-memory"
+
+      - alert: CriticalMemoryUsage
+        expr: memory_usage_percent > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: memory
+          category: system
+        annotations:
+          summary: "内存使用率严重过高"
+          description: "实例 {{ $labels.instance }} 内存使用率为 {{ $value }}%，已超过95%阈值持续2分钟"
+          value: "{{ $value }}%"
+          threshold: "95%"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/critical-memory"
+
+      # 磁盘使用率告警
+      - alert: HighDiskUsage
+        expr: disk_usage_percent{device!~"tmpfs|devtmpfs"} > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: disk
+          category: system
+        annotations:
+          summary: "磁盘使用率过高"
+          description: "实例 {{ $labels.instance }} 磁盘 {{ $labels.device }} 使用率为 {{ $value }}%，已超过80%阈值持续5分钟"
+          value: "{{ $value }}%"
+          threshold: "80%"
+          device: "{{ $labels.device }}"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/high-disk"
+
+      - alert: CriticalDiskUsage
+        expr: disk_usage_percent{device!~"tmpfs|devtmpfs"} > 90
+        for: 2m
+        labels:
+          severity: critical
+          service: disk
+          category: system
+        annotations:
+          summary: "磁盘使用率严重过高"
+          description: "实例 {{ $labels.instance }} 磁盘 {{ $labels.device }} 使用率为 {{ $value }}%，已超过90%阈值持续2分钟"
+          value: "{{ $value }}%"
+          threshold: "90%"
+          device: "{{ $labels.device }}"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/critical-disk"
+
+      # 磁盘空间不足告警
+      - alert: DiskSpaceLow
+        expr: disk_free_bytes / 1024 / 1024 / 1024 < 5
+        for: 5m
+        labels:
+          severity: warning
+          service: disk
+          category: system
+        annotations:
+          summary: "磁盘剩余空间不足"
+          description: "实例 {{ $labels.instance }} 磁盘 {{ $labels.device }} 剩余空间仅 {{ $value }}GB"
+          value: "{{ $value }}GB"
+          threshold: "5GB"
+          device: "{{ $labels.device }}"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/disk-space-low"
+
+      # 系统负载告警
+      - alert: HighSystemLoad
+        expr: system_load_average_1m > 4
+        for: 5m
+        labels:
+          severity: warning
+          service: load
+          category: system
+        annotations:
+          summary: "系统负载过高"
+          description: "实例 {{ $labels.instance }} 1分钟平均负载为 {{ $value }}，已超过4.0阈值持续5分钟"
+          value: "{{ $value }}"
+          threshold: "4.0"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/high-load"
+
+      # 网络流量告警
+      - alert: HighNetworkTraffic
+        expr: rate(network_bytes_total[5m]) * 8 / 1024 / 1024 > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: network
+          category: system
+        annotations:
+          summary: "网络流量过高"
+          description: "实例 {{ $labels.instance }} 网络接口 {{ $labels.interface }} 流量为 {{ $value }}Mbps，已超过100Mbps阈值持续5分钟"
+          value: "{{ $value }}Mbps"
+          threshold: "100Mbps"
+          interface: "{{ $labels.interface }}"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/high-network"
+
+      # 网络错误包告警
+      - alert: HighNetworkErrors
+        expr: rate(network_errors_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          service: network
+          category: system
+        annotations:
+          summary: "网络错误包过多"
+          description: "实例 {{ $labels.instance }} 网络接口 {{ $labels.interface }} 错误包速率为 {{ $value }}/s，已超过10/s阈值持续2分钟"
+          value: "{{ $value }}/s"
+          threshold: "10/s"
+          interface: "{{ $labels.interface }}"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/network-errors"
+
+      # 进程数量告警
+      - alert: TooManyProcesses
+        expr: process_count > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: processes
+          category: system
+        annotations:
+          summary: "进程数量过多"
+          description: "实例 {{ $labels.instance }} 进程数量为 {{ $value }}，已超过1000阈值持续5分钟"
+          value: "{{ $value }}"
+          threshold: "1000"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/too-many-processes"
+
+      # 文件描述符使用率告警
+      - alert: HighFileDescriptorUsage
+        expr: file_descriptor_usage_percent > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: fd
+          category: system
+        annotations:
+          summary: "文件描述符使用率过高"
+          description: "实例 {{ $labels.instance }} 文件描述符使用率为 {{ $value }}%，已超过80%阈值持续5分钟"
+          value: "{{ $value }}%"
+          threshold: "80%"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/high-fd-usage"
+
+      # 实例宕机告警
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: instance
+          category: system
+        annotations:
+          summary: "实例宕机"
+          description: "实例 {{ $labels.instance }} 已宕机超过1分钟"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/instance-down"
+
+      # 服务重启告警
+      - alert: ServiceRestarted
+        expr: increase(process_start_time_seconds[5m]) > 0
+        for: 0s
+        labels:
+          severity: info
+          service: process
+          category: system
+        annotations:
+          summary: "服务重启"
+          description: "实例 {{ $labels.instance }} 上的服务在过去5分钟内重启了"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/service-restart"

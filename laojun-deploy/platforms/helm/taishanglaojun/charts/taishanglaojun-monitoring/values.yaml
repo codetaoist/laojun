@@ -1,0 +1,435 @@
+# 监控栈默认配置
+nameOverride: ""
+fullnameOverride: ""
+namespaceOverride: ""
+
+# 全局配置
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+  namespace: "taishanglaojun-monitoring"
+
+# 命名空间配置
+namespace:
+  create: true
+  labels: {}
+  annotations: {}
+
+# 镜像拉取配置
+imagePullSecrets: []
+
+# 服务账户配置
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod 安全上下文
+podSecurityContext:
+  fsGroup: 2000
+
+# 容器安全上下文
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# 节点选择器
+nodeSelector: {}
+
+# 容忍度
+tolerations: []
+
+# 亲和性
+affinity: {}
+
+# Prometheus 配置
+prometheus:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: prom/prometheus
+    tag: "v2.45.0"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 9090
+  
+  # 数据保留时间
+  retention: "30d"
+  
+  # 存储配置
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 50Gi
+  
+  # 资源配置
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  
+  # 配置文件
+  config:
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    
+    rule_files:
+      - "/etc/prometheus/rules/*.yml"
+    
+    scrape_configs:
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+      
+      - job_name: 'kubernetes-apiservers'
+        kubernetes_sd_configs:
+          - role: endpoints
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: default;kubernetes;https
+      
+      - job_name: 'kubernetes-nodes'
+        kubernetes_sd_configs:
+          - role: node
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+          - target_label: __address__
+            replacement: kubernetes.default.svc:443
+          - source_labels: [__meta_kubernetes_node_name]
+            regex: (.+)
+            target_label: __metrics_path__
+            replacement: /api/v1/nodes/${1}/proxy/metrics
+      
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+
+# Grafana 配置
+grafana:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: grafana/grafana
+    tag: "10.0.0"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 3000
+  
+  # 管理员凭据
+  admin:
+    username: admin
+    password: admin123
+  
+  # 插件列表
+  plugins:
+    - grafana-piechart-panel
+    - grafana-worldmap-panel
+    - grafana-clock-panel
+  
+  # 存储配置
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 10Gi
+  
+  # 资源配置
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  
+  # 数据源配置
+  datasources:
+    prometheus:
+      name: Prometheus
+      type: prometheus
+      url: http://taishanglaojun-prometheus:9090
+      access: proxy
+      isDefault: true
+    
+    jaeger:
+      name: Jaeger
+      type: jaeger
+      url: http://taishanglaojun-jaeger:16686
+      access: proxy
+
+# Jaeger 配置
+jaeger:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: jaegertracing/all-in-one
+    tag: "1.47"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 16686
+  
+  # 存储配置
+  storage:
+    type: memory  # 可选: memory, elasticsearch, cassandra
+    elasticsearch:
+      serverUrls: "http://elasticsearch:9200"
+      username: ""
+      password: ""
+  
+  # 资源配置
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# InfluxDB 配置
+influxdb:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: influxdb
+    tag: "2.7"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 8086
+  
+  # 管理员配置
+  admin:
+    username: admin
+    password: admin123
+    org: taishanglaojun
+    bucket: metrics
+    token: "taishanglaojun-token"
+  
+  # 存储配置
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 20Gi
+  
+  # 资源配置
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Elasticsearch 配置
+elasticsearch:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: docker.elastic.co/elasticsearch/elasticsearch
+    tag: "8.8.0"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 9200
+  
+  # 集群配置
+  cluster:
+    name: taishanglaojun-logs
+  
+  # 存储配置
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 30Gi
+  
+  # 资源配置
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  
+  # 环境变量
+  env:
+    - name: discovery.type
+      value: single-node
+    - name: xpack.security.enabled
+      value: "false"
+
+# Kibana 配置
+kibana:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: docker.elastic.co/kibana/kibana
+    tag: "8.8.0"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 5601
+  
+  # Elasticsearch 连接
+  elasticsearch:
+    hosts: ["http://taishanglaojun-elasticsearch:9200"]
+  
+  # 资源配置
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+# Ingress 配置
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  
+  hosts:
+    - host: prometheus.taishanglaojun.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: prometheus
+    
+    - host: grafana.taishanglaojun.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: grafana
+    
+    - host: jaeger.taishanglaojun.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: jaeger
+    
+    - host: kibana.taishanglaojun.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: kibana
+  
+  tls: []
+
+# 网络策略
+networkPolicy:
+  enabled: true
+  
+  # 入站规则
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: taishanglaojun
+      ports:
+        - protocol: TCP
+          port: 9090  # Prometheus
+        - protocol: TCP
+          port: 3000  # Grafana
+        - protocol: TCP
+          port: 16686 # Jaeger
+        - protocol: TCP
+          port: 5601  # Kibana
+    
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 9090
+        - protocol: TCP
+          port: 3000
+        - protocol: TCP
+          port: 16686
+        - protocol: TCP
+          port: 5601
+  
+  # 出站规则
+  egress:
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+    
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: taishanglaojun
+      ports:
+        - protocol: TCP
+          port: 8081  # Discovery
+        - protocol: TCP
+          port: 8082  # Monitoring
+
+# 持久化存储
+persistence:
+  storageClass: ""
+  accessMode: ReadWriteOnce

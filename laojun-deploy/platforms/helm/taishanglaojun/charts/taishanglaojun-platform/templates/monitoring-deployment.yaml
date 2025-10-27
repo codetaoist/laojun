@@ -1,0 +1,100 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "taishanglaojun-platform.fullname" . }}-monitoring
+  namespace: {{ .Values.namespace.name | default "taishanglaojun" }}
+  labels:
+    {{- include "taishanglaojun-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: monitoring
+spec:
+  {{- if not .Values.monitoring.autoscaling.enabled }}
+  replicas: {{ .Values.monitoring.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "taishanglaojun-platform.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: monitoring
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.monitoring.service.metricsPort }}"
+        prometheus.io/path: "/metrics"
+        checksum/config: {{ include (print $.Template.BasePath "/monitoring-configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "taishanglaojun-platform.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: monitoring
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "taishanglaojun-platform.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: laojun-monitoring
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.monitoring.image.repository }}:{{ .Values.monitoring.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.monitoring.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.monitoring.service.port }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.monitoring.service.metricsPort }}
+              protocol: TCP
+          env:
+            - name: SERVER_PORT
+              value: "{{ .Values.monitoring.service.port }}"
+            - name: METRICS_PORT
+              value: "{{ .Values.monitoring.service.metricsPort }}"
+            - name: PROMETHEUS_URL
+              value: "http://prometheus.taishanglaojun-monitoring.svc.cluster.local:9090"
+            - name: INFLUXDB_URL
+              value: "http://influxdb.taishanglaojun-monitoring.svc.cluster.local:8086"
+            - name: ELASTICSEARCH_URL
+              value: "http://elasticsearch.taishanglaojun-monitoring.svc.cluster.local:9200"
+            - name: LOG_LEVEL
+              value: "{{ .Values.monitoring.logLevel | default "info" }}"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.monitoring.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/configs
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "taishanglaojun-platform.fullname" . }}-monitoring-config
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,316 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: taishanglaojun-monitoring
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: taishanglaojun-platform
+data:
+  prometheus.yml: |
+    # Prometheus 配置文件
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: 'taishanglaojun-k8s'
+        environment: 'production'
+
+    rule_files:
+      - "/etc/prometheus/rules/*.yml"
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+              - laojun-monitoring:8082
+
+    scrape_configs:
+      # Prometheus 自身监控
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+        scrape_interval: 30s
+        metrics_path: /metrics
+
+      # Kubernetes API Server
+      - job_name: 'kubernetes-apiservers'
+        kubernetes_sd_configs:
+          - role: endpoints
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: default;kubernetes;https
+
+      # Kubernetes Nodes
+      - job_name: 'kubernetes-nodes'
+        kubernetes_sd_configs:
+          - role: node
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+
+      # Kubernetes Pods
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+
+      # 太上老君服务发现
+      - job_name: 'laojun-discovery'
+        static_configs:
+          - targets: ['laojun-discovery:8081']
+        scrape_interval: 30s
+        metrics_path: /metrics
+
+      # 太上老君监控
+      - job_name: 'laojun-monitoring'
+        static_configs:
+          - targets: ['laojun-monitoring:8082']
+        scrape_interval: 30s
+        metrics_path: /metrics
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: taishanglaojun-monitoring
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: taishanglaojun-platform
+data:
+  alert_rules.yml: |
+    groups:
+      - name: system.rules
+        rules:
+          - alert: HighCPUUsage
+            expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+            for: 5m
+            labels:
+              severity: warning
+              category: system
+            annotations:
+              summary: "High CPU usage detected"
+              description: "CPU usage is above 80% for more than 5 minutes on {{ $labels.instance }}"
+
+          - alert: HighMemoryUsage
+            expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+            for: 5m
+            labels:
+              severity: warning
+              category: system
+            annotations:
+              summary: "High memory usage detected"
+              description: "Memory usage is above 85% for more than 5 minutes on {{ $labels.instance }}"
+
+      - name: kubernetes.rules
+        rules:
+          - alert: KubernetesPodCrashLooping
+            expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+            for: 5m
+            labels:
+              severity: critical
+              category: kubernetes
+            annotations:
+              summary: "Pod is crash looping"
+              description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash looping"
+
+          - alert: KubernetesNodeNotReady
+            expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+            for: 5m
+            labels:
+              severity: critical
+              category: kubernetes
+            annotations:
+              summary: "Kubernetes node not ready"
+              description: "Node {{ $labels.node }} is not ready"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-config
+  namespace: taishanglaojun-monitoring
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: taishanglaojun-platform
+data:
+  grafana.ini: |
+    [server]
+    http_port = 3000
+    domain = localhost
+    root_url = http://localhost:3000/
+
+    [database]
+    type = sqlite3
+    path = /var/lib/grafana/grafana.db
+
+    [security]
+    admin_user = admin
+    admin_password = admin123
+
+    [users]
+    allow_sign_up = false
+    auto_assign_org = true
+    auto_assign_org_role = Viewer
+
+    [auth.anonymous]
+    enabled = false
+
+    [dashboards]
+    default_home_dashboard_path = /etc/grafana/provisioning/dashboards/home.json
+
+    [alerting]
+    enabled = true
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: laojun-monitoring-config
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: laojun-monitoring
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: taishanglaojun-platform
+data:
+  config.yaml: |
+    server:
+      host: "0.0.0.0"
+      port: 8082
+      read_timeout: "30s"
+      write_timeout: "30s"
+      idle_timeout: "60s"
+      max_header_bytes: 1048576
+
+    logging:
+      level: "info"
+      format: "json"
+      output: "stdout"
+      file_path: "/var/log/laojun-monitoring.log"
+      max_size: 100
+      max_backups: 3
+      max_age: 7
+      compress: true
+
+    metrics:
+      enabled: true
+      path: "/metrics"
+      namespace: "laojun_monitoring"
+      subsystem: "api"
+
+    alerting:
+      enabled: true
+      evaluation_interval: "30s"
+      rules:
+        - name: "high_cpu_usage"
+          expr: "cpu_usage_percent > 80"
+          duration: "5m"
+          severity: "warning"
+          labels:
+            category: "system"
+          annotations:
+            summary: "High CPU usage detected"
+            description: "CPU usage is above 80% for more than 5 minutes"
+
+    storage:
+      prometheus:
+        enabled: true
+        url: "http://prometheus:9090"
+        timeout: "30s"
+        retention: "15d"
+
+    exporters:
+      prometheus:
+        enabled: true
+        port: 8082
+        path: "/metrics"
+        namespace: "laojun_monitoring"
+
+    collectors:
+      system:
+        enabled: true
+        interval: "30s"
+        cpu: true
+        memory: true
+        disk: true
+        network: true
+        load: true
+        uptime: true
+        processes: true
+
+      application:
+        enabled: true
+        interval: "30s"
+        runtime: true
+        gc: true
+        goroutines: true
+        memory: true
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: laojun-discovery-config
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: laojun-discovery
+    app.kubernetes.io/component: discovery
+    app.kubernetes.io/part-of: taishanglaojun-platform
+data:
+  config.yaml: |
+    server:
+      host: "0.0.0.0"
+      port: 8081
+      read_timeout: "30s"
+      write_timeout: "30s"
+      idle_timeout: "60s"
+
+    consul:
+      address: "consul:8500"
+      scheme: "http"
+      datacenter: "dc1"
+      token: ""
+      
+    redis:
+      address: "redis:6379"
+      password: ""
+      db: 0
+      pool_size: 10
+      
+    logging:
+      level: "info"
+      format: "json"
+      output: "stdout"

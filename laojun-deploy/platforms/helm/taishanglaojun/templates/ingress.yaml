@@ -1,0 +1,173 @@
+{{- if .Values.ingress.enabled }}
+{{- $fullName := include "taishanglaojun.fullname" . -}}
+{{- $domain := include "taishanglaojun.domain" . -}}
+{{- if and .Values.ingress.className (not (hasKey .Values.ingress.annotations "kubernetes.io/ingress.class")) }}
+  {{- $_ := set .Values.ingress.annotations "kubernetes.io/ingress.class" .Values.ingress.className}}
+{{- end }}
+---
+# 平台服务 Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullName }}-platform
+  namespace: {{ .Values.platform.namespace | default "taishanglaojun" }}
+  labels:
+    {{- include "taishanglaojun.labels" . | nindent 4 }}
+    app.kubernetes.io/component: platform-ingress
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- range .Values.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    - host: {{ printf "api.%s" $domain | quote }}
+      http:
+        paths:
+          - path: /discovery
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-platform-discovery
+                port:
+                  number: 8081
+          - path: /monitoring
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-platform-monitoring
+                port:
+                  number: 8082
+    - host: {{ $domain | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-platform-discovery
+                port:
+                  number: 8081
+{{- if .Values.monitoring.enabled }}
+---
+# 监控服务 Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullName }}-monitoring
+  namespace: {{ .Values.monitoring.namespace | default "taishanglaojun-monitoring" }}
+  labels:
+    {{- include "taishanglaojun.labels" . | nindent 4 }}
+    app.kubernetes.io/component: monitoring-ingress
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- range .Values.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- if .Values.monitoring.prometheus.enabled }}
+    - host: {{ printf "prometheus.%s" $domain | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-monitoring-prometheus
+                port:
+                  number: 9090
+    {{- end }}
+    {{- if .Values.monitoring.grafana.enabled }}
+    - host: {{ printf "grafana.%s" $domain | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-monitoring-grafana
+                port:
+                  number: 3000
+    {{- end }}
+    {{- if .Values.monitoring.jaeger.enabled }}
+    - host: {{ printf "jaeger.%s" $domain | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-monitoring-jaeger
+                port:
+                  number: 16686
+    {{- end }}
+    {{- if .Values.monitoring.kibana.enabled }}
+    - host: {{ printf "kibana.%s" $domain | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-monitoring-kibana
+                port:
+                  number: 5601
+    {{- end }}
+    - host: {{ printf "monitoring.%s" $domain | quote }}
+      http:
+        paths:
+          - path: /prometheus
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-monitoring-prometheus
+                port:
+                  number: 9090
+          - path: /grafana
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-monitoring-grafana
+                port:
+                  number: 3000
+          - path: /jaeger
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-monitoring-jaeger
+                port:
+                  number: 16686
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-monitoring-grafana
+                port:
+                  number: 3000
+{{- end }}
+{{- end }}

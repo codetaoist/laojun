@@ -1,0 +1,19 @@
+apiVersion: v2
+name: taishanglaojun-platform
+description: 太上老君微服务平台核心服务
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+home: https://github.com/codetaoist/laojun
+sources:
+- https://github.com/codetaoist/laojun
+maintainers:
+  - name: TaiShang LaoJun Team
+    email: team@taishanglaojun.com
+keywords:
+  - microservices
+  - service-discovery
+  - monitoring
+  - platform
+annotations:
+  category: Platform

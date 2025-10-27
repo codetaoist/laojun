@@ -1,0 +1,303 @@
+version: '3.8'
+
+services:
+  # 服务发现模块
+  laojun-discovery:
+    build:
+      context: ../../laojun-discovery  # 绝对路径相对于项目根目录
+      dockerfile: Dockerfile
+    container_name: laojun-discovery
+    ports:
+      - "8081:8081"
+    environment:
+      - CONFIG_PATH=/app/configs/config.yaml
+      - GIN_MODE=release
+      - REDIS_URL=redis://redis:6379
+      - CONSUL_URL=consul:8500
+    volumes:
+      - ../../laojun-discovery/configs:/app/configs:ro  # 绝对路径，只读挂载
+      - ../../laojun-discovery/logs:/app/logs           # 绝对路径，日志输出
+    depends_on:
+      - redis
+      - consul
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 监控配置模块
+  laojun-monitoring:
+    build:
+      context: ../../laojun-monitoring  # 绝对路径相对于项目根目录
+      dockerfile: Dockerfile
+    container_name: laojun-monitoring
+    ports:
+      - "8082:8082"
+    environment:
+      - CONFIG_PATH=/app/configs/config.yaml
+      - GIN_MODE=release
+      - PROMETHEUS_URL=http://prometheus:9090
+      - INFLUXDB_URL=http://influxdb:8086
+    volumes:
+      - ../../laojun-monitoring/configs:/app/configs:ro  # 绝对路径，只读挂载
+      - ../../laojun-monitoring/logs:/app/logs           # 绝对路径，日志输出
+    depends_on:
+      - prometheus
+      - influxdb
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: laojun-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass laojun123
+    volumes:
+      - redis_data:/data
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Consul 服务注册中心
+  consul:
+    image: consul:1.16
+    container_name: laojun-consul
+    ports:
+      - "8500:8500"
+      - "8600:8600/udp"
+    command: >
+      consul agent -server -ui -node=server-1 -bootstrap-expect=1
+      -client=0.0.0.0 -data-dir=/consul/data
+    volumes:
+      - consul_data:/consul/data
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "consul", "members"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus 监控
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: laojun-prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ../../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro  # 绝对路径，只读挂载
+      - prometheus_data:/prometheus
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # InfluxDB 时序数据库
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: laojun-influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=laojun123
+      - DOCKER_INFLUXDB_INIT_ORG=laojun
+      - DOCKER_INFLUXDB_INIT_BUCKET=monitoring
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=laojun-monitoring-token
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana 可视化
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: laojun-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=laojun123
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../../grafana/provisioning:/etc/grafana/provisioning:ro  # 绝对路径，只读挂载
+      - ../../grafana/dashboards:/var/lib/grafana/dashboards:ro  # 绝对路径，只读挂载
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - influxdb
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Jaeger 链路追踪
+  jaeger:
+    image: jaegertracing/all-in-one:1.47
+    container_name: laojun-jaeger
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+      - "14250:14250"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+    volumes:
+      - jaeger_data:/tmp
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:16686/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Elasticsearch (可选，用于日志存储)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.0
+    container_name: laojun-elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Kibana (可选，用于日志可视化)
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.8.0
+    container_name: laojun-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - xpack.security.enabled=false
+    volumes:
+      - kibana_data:/usr/share/kibana/data
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    depends_on:
+      - elasticsearch
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx 反向代理 (可选)
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: laojun-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../../nginx/nginx.conf:/etc/nginx/nginx.conf:ro  # 绝对路径，只读挂载
+      - ../../nginx/conf.d:/etc/nginx/conf.d:ro          # 绝对路径，只读挂载
+      - nginx_logs:/var/log/nginx
+    networks:
+      - laojun-network
+    restart: unless-stopped
+    depends_on:
+      - laojun-discovery
+      - laojun-monitoring
+      - grafana
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# 网络配置
+networks:
+  laojun-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# 数据卷配置
+volumes:
+  # 应用数据
+  discovery_logs:
+    driver: local
+  monitoring_logs:
+    driver: local
+  
+  # 基础设施数据
+  redis_data:
+    driver: local
+  consul_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  influxdb_data:
+    driver: local
+  grafana_data:
+    driver: local
+  jaeger_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+  kibana_data:
+    driver: local
+  nginx_logs:
+    driver: local

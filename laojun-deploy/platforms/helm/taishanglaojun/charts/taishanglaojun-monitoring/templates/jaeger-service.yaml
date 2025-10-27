@@ -1,0 +1,40 @@
+{{- if .Values.jaeger.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "taishanglaojun-monitoring.fullname" . }}-jaeger
+  namespace: {{ include "taishanglaojun-monitoring.namespace" . }}
+  labels:
+    {{- include "taishanglaojun-monitoring.labels" . | nindent 4 }}
+    app.kubernetes.io/component: jaeger
+spec:
+  type: {{ .Values.jaeger.service.type }}
+  ports:
+    - port: {{ .Values.jaeger.service.port }}
+      targetPort: 16686
+      protocol: TCP
+      name: http
+    - port: 14250
+      targetPort: 14250
+      protocol: TCP
+      name: grpc
+    - port: 14268
+      targetPort: 14268
+      protocol: TCP
+      name: thrift-http
+    - port: 6831
+      targetPort: 6831
+      protocol: UDP
+      name: thrift-compact
+    - port: 6832
+      targetPort: 6832
+      protocol: UDP
+      name: thrift-binary
+    - port: 9411
+      targetPort: 9411
+      protocol: TCP
+      name: zipkin
+  selector:
+    {{- include "taishanglaojun-monitoring.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: jaeger
+{{- end }}

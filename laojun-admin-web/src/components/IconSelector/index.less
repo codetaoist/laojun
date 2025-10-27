@@ -1,0 +1,253 @@
+.icon-selector-modal {
+  .ant-modal-body {
+    padding: 16px;
+  }
+}
+
+.icon-selector {
+  .icon-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .ant-tabs {
+    .ant-tabs-tab {
+      position: relative;
+      
+      .ant-tabs-tab-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+    }
+    
+    .ant-tabs-extra-content {
+      margin-left: 16px;
+    }
+  }
+
+  .icon-grid {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 16px;
+    min-height: 400px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 8px;
+    
+    &.grid {
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+    
+    &.list {
+      grid-template-columns: 1fr;
+      gap: 8px;
+      
+      .icon-item {
+        flex-direction: row;
+        padding: 8px 12px;
+        
+        .icon-content {
+          margin-bottom: 0;
+          margin-right: 12px;
+          
+          .icon {
+            font-size: 20px;
+          }
+        }
+        
+        .icon-name {
+          flex: 1;
+          text-align: left;
+          font-size: 13px;
+        }
+      }
+    }
+  }
+
+  .icon-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 8px;
+    border: 1px solid #f0f0f0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    background: #fff;
+    
+    &:hover {
+      border-color: #1890ff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      
+      .icon-actions {
+        opacity: 1;
+      }
+    }
+    
+    &.selected {
+      border-color: #1890ff;
+      background-color: #e6f7ff;
+      
+      .icon-content .icon {
+        color: #1890ff;
+      }
+    }
+    
+    .icon-content {
+      position: relative;
+      margin-bottom: 8px;
+      
+      .icon {
+        font-size: 24px;
+        color: #666;
+        transition: color 0.2s;
+        
+        &.custom-icon {
+          width: 24px;
+          height: 24px;
+          object-fit: contain;
+        }
+      }
+      
+      .icon-actions {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        opacity: 0;
+        transition: opacity 0.2s;
+        
+        .ant-btn {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          border: none;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          
+          &.favorite-active {
+            color: #faad14;
+            background-color: #fff7e6;
+          }
+          
+          &.ant-btn-dangerous {
+            color: #ff4d4f;
+            background-color: #fff2f0;
+          }
+        }
+      }
+    }
+    
+    .icon-name {
+      font-size: 12px;
+      color: #666;
+      text-align: center;
+      word-break: break-all;
+      line-height: 1.2;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+  }
+
+  .icon-pagination {
+    display: flex;
+    justify-content: center;
+    padding-top: 16px;
+    border-top: 1px solid #f0f0f0;
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .icon-selector-modal {
+    .ant-modal {
+      width: 95% !important;
+      max-width: none;
+    }
+  }
+  
+  .icon-selector {
+    .icon-toolbar {
+      flex-direction: column;
+      gap: 12px;
+      align-items: stretch;
+    }
+    
+    .icon-grid {
+      &.grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 8px;
+      }
+      
+      .icon-item {
+        padding: 8px 4px;
+        
+        .icon-content .icon {
+          font-size: 20px;
+        }
+        
+        .icon-name {
+          font-size: 11px;
+        }
+      }
+    }
+  }
+}
+
+// 暗色主题支持
+.dark {
+  .icon-selector {
+    .icon-toolbar {
+      border-bottom-color: rgba(255, 255, 255, 0.12);
+    }
+    
+    .icon-item {
+      border-color: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      
+      &:hover {
+        border-color: #1890ff;
+        background: rgba(255, 255, 255, 0.08);
+      }
+      
+      &.selected {
+        background-color: rgba(24, 144, 255, 0.2);
+      }
+      
+      .icon-name {
+        color: rgba(255, 255, 255, 0.65);
+      }
+    }
+    
+    .icon-pagination {
+      border-top-color: rgba(255, 255, 255, 0.12);
+    }
+  }
+}
+
+// 加载状态
+.icon-grid {
+  &.loading {
+    .icon-item {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+  }
+}
+
+// 空状态样式
+.ant-empty {
+  margin: 40px 0;
+  
+  .ant-empty-description {
+    color: #999;
+  }
+}

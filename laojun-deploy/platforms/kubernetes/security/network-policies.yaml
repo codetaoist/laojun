@@ -1,0 +1,525 @@
+# 网络安全策略配置
+# 为太上老君微服务平台定义网络访问控制规则
+
+# 默认拒绝所有入站流量
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    policy.type: security
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+---
+# 默认拒绝所有出站流量
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-egress
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    policy.type: security
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+---
+# 允许服务发现组件的网络访问
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: taishanglaojun-discovery-policy
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: taishanglaojun-discovery
+    policy.type: application
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: taishanglaojun-discovery
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许来自 Ingress Controller 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+  # 允许来自同一命名空间的其他服务
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    ports:
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 9090  # 指标端口
+  # 允许来自监控系统的访问
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 9090
+  egress:
+  # 允许访问 DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # 允许访问 Consul
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    - podSelector:
+        matchLabels:
+          app: consul
+    ports:
+    - protocol: TCP
+      port: 8500
+  # 允许访问 Redis
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  # 允许 HTTPS 出站流量（用于外部 API 调用）
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+---
+# 允许监控组件的网络访问
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: taishanglaojun-monitoring-policy
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: taishanglaojun-monitoring
+    policy.type: application
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: taishanglaojun-monitoring
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许来自 Ingress Controller 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+  # 允许来自同一命名空间的其他服务
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    ports:
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 9090  # 指标端口
+  egress:
+  # 允许访问 DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # 允许访问服务发现组件
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: taishanglaojun-discovery
+    ports:
+    - protocol: TCP
+      port: 8080
+  # 允许 HTTPS 出站流量
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+---
+# Prometheus 网络策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: prometheus-policy
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: prometheus
+    policy.type: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许来自 Grafana 的访问
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: grafana
+    ports:
+    - protocol: TCP
+      port: 9090
+  # 允许来自 Ingress Controller 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 9090
+  egress:
+  # 允许访问 DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # 允许抓取应用指标
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    ports:
+    - protocol: TCP
+      port: 9090
+    - protocol: TCP
+      port: 8080
+  # 允许访问 Kubernetes API
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 6443
+---
+# Grafana 网络策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: grafana-policy
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: grafana
+    policy.type: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: grafana
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许来自 Ingress Controller 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 3000
+  # 允许来自管理员的访问
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    - podSelector:
+        matchLabels:
+          role: admin
+    ports:
+    - protocol: TCP
+      port: 3000
+  egress:
+  # 允许访问 DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # 允许访问 Prometheus
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    ports:
+    - protocol: TCP
+      port: 9090
+  # 允许访问 Jaeger
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: jaeger
+    ports:
+    - protocol: TCP
+      port: 16686
+  # 允许 HTTPS 出站流量（用于插件下载等）
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+---
+# Jaeger 网络策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: jaeger-policy
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: jaeger
+    policy.type: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: jaeger
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许来自应用的追踪数据
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    ports:
+    - protocol: TCP
+      port: 14268  # HTTP
+    - protocol: UDP
+      port: 6831   # UDP Thrift
+    - protocol: UDP
+      port: 6832   # UDP Binary
+    - protocol: TCP
+      port: 14267  # Thrift
+  # 允许来自 Grafana 的查询
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: grafana
+    ports:
+    - protocol: TCP
+      port: 16686
+  # 允许来自 Ingress Controller 的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 16686
+  egress:
+  # 允许访问 DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # 允许访问 Elasticsearch（如果使用）
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: elasticsearch
+    ports:
+    - protocol: TCP
+      port: 9200
+---
+# Redis 网络策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-policy
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: redis
+    policy.type: database
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 只允许来自应用服务的访问
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/component: application
+    ports:
+    - protocol: TCP
+      port: 6379
+  egress:
+  # 允许访问 DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+---
+# Consul 网络策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: consul-policy
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: consul
+    policy.type: database
+spec:
+  podSelector:
+    matchLabels:
+      app: consul
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 允许来自应用服务的访问
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/component: application
+    ports:
+    - protocol: TCP
+      port: 8500  # HTTP API
+    - protocol: TCP
+      port: 8300  # Server RPC
+    - protocol: TCP
+      port: 8301  # Serf LAN
+    - protocol: UDP
+      port: 8301  # Serf LAN
+    - protocol: TCP
+      port: 8302  # Serf WAN
+    - protocol: UDP
+      port: 8302  # Serf WAN
+  # 允许 Consul 集群内部通信
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    - podSelector:
+        matchLabels:
+          app: consul
+    ports:
+    - protocol: TCP
+      port: 8300
+    - protocol: TCP
+      port: 8301
+    - protocol: UDP
+      port: 8301
+    - protocol: TCP
+      port: 8302
+    - protocol: UDP
+      port: 8302
+  egress:
+  # 允许访问 DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # 允许 Consul 集群内部通信
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: taishanglaojun
+    - podSelector:
+        matchLabels:
+          app: consul
+    ports:
+    - protocol: TCP
+      port: 8300
+    - protocol: TCP
+      port: 8301
+    - protocol: UDP
+      port: 8301
+    - protocol: TCP
+      port: 8302
+    - protocol: UDP
+      port: 8302
+---
+# 允许健康检查的网络策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: health-check-policy
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    policy.type: health
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: taishanglaojun
+  policyTypes:
+  - Ingress
+  ingress:
+  # 允许来自 Kubernetes 的健康检查
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 8080  # 健康检查端口
+  # 允许来自负载均衡器的健康检查
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080

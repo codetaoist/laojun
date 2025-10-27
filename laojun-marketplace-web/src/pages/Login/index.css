@@ -1,0 +1,342 @@
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><radialGradient id="a" cx="50%" cy="50%"><stop offset="0%" stop-color="%23ffffff" stop-opacity="0.1"/><stop offset="100%" stop-color="%23ffffff" stop-opacity="0"/></radialGradient></defs><rect width="100%" height="100%" fill="url(%23a)"/></svg>');
+  background-size: 100px 100px;
+  animation: float 20s ease-in-out infinite;
+}
+
+.login-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.login-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 400px;
+  padding: 20px;
+}
+
+.login-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  padding: 40px 32px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-title {
+  margin-bottom: 8px !important;
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.login-subtitle {
+  font-size: 14px;
+  color: #666;
+}
+
+.login-tabs .ant-tabs-nav {
+  margin-bottom: 24px;
+}
+
+.login-tabs .ant-tabs-tab {
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.login-form,
+.register-form {
+  margin-top: 8px;
+}
+
+.login-form .ant-form-item,
+.register-form .ant-form-item {
+  margin-bottom: 20px;
+}
+
+.login-form .ant-input,
+.register-form .ant-input,
+.login-form .ant-input-password,
+.register-form .ant-input-password {
+  border-radius: 8px;
+  border: 1px solid #d9d9d9;
+  transition: all 0.3s ease;
+}
+
+.login-form .ant-input:focus,
+.register-form .ant-input:focus,
+.login-form .ant-input-password:focus,
+.register-form .ant-input-password:focus,
+.login-form .ant-input-focused,
+.register-form .ant-input-focused,
+.login-form .ant-input-password-focused,
+.register-form .ant-input-password-focused {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.login-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.forgot-password {
+  color: #1890ff;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.3s ease;
+}
+
+.forgot-password:hover {
+  color: #40a9ff;
+  text-decoration: underline;
+}
+
+.login-button,
+.register-button {
+  height: 48px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.login-button:hover,
+.register-button:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+}
+
+.social-login {
+  margin-top: 16px;
+}
+
+.github-login {
+  background: #24292e;
+  border-color: #24292e;
+  color: white;
+  border-radius: 8px;
+  height: 44px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.github-login:hover {
+  background: #2f363d;
+  border-color: #2f363d;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(36, 41, 46, 0.3);
+}
+
+.google-login {
+  background: #db4437;
+  border-color: #db4437;
+  color: white;
+  border-radius: 8px;
+  height: 44px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.google-login:hover {
+  background: #e57373;
+  border-color: #e57373;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(219, 68, 55, 0.3);
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.login-footer a {
+  color: #1890ff;
+  text-decoration: none;
+}
+
+/* 验证码容器样式 */
+.captcha-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.captcha-image-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 120px;
+  min-width: 80px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.captcha-image-wrapper:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.captcha-image-wrapper:active {
+  transform: scale(0.98);
+}
+
+.captcha-container .ant-image {
+  width: 100%;
+}
+
+.captcha-container .ant-image img {
+  width: 100% !important;
+  height: 40px !important;
+  object-fit: contain !important;
+  transition: opacity 0.3s ease;
+}
+
+.captcha-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.captcha-loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #1890ff;
+  border-radius: 50%;
+  animation: captcha-spin 1s linear infinite;
+}
+
+@keyframes captcha-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.captcha-hint {
+  font-size: 12px;
+  margin-top: 2px;
+  text-align: center;
+  color: #999 !important;
+}
+
+/* 响应式调整 */
+@media (max-width: 480px) {
+  .captcha-container {
+    gap: 2px;
+  }
+  
+  .captcha-container .ant-image img {
+    height: 35px !important;
+  }
+  
+  .captcha-hint {
+    font-size: 11px;
+  }
+}
+
+.login-footer a:hover {
+  text-decoration: underline;
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+  .login-content {
+    padding: 16px;
+  }
+  
+  .login-card {
+    padding: 24px 20px;
+  }
+  
+  .login-title {
+    font-size: 24px;
+  }
+}
+
+/* 错误状态样式 */
+.ant-form-item-has-error .ant-input,
+.ant-form-item-has-error .ant-input-password {
+  border-color: #ff4d4f;
+}
+
+.ant-form-item-has-error .ant-input:focus,
+.ant-form-item-has-error .ant-input-password:focus {
+  border-color: #ff4d4f;
+  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
+}
+
+/* 加载状态 */
+.ant-btn-loading {
+  pointer-events: none;
+}
+
+/* 自定义滚动条 */
+.login-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.login-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.login-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.login-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}

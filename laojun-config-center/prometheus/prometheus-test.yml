@@ -1,0 +1,147 @@
+# Prometheus 测试环境配置文件
+# 用于监控测试环境中的服务
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: 'testing'
+    cluster: 'laojun-test'
+
+# 规则文件
+rule_files:
+  - "rules/*.yml"
+
+# 告警管理器配置
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# 抓取配置
+scrape_configs:
+  # Prometheus 自身监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 5s
+    metrics_path: /metrics
+
+  # Admin API 服务监控
+  - job_name: 'admin-api'
+    static_configs:
+      - targets: ['host.docker.internal:8001']
+    scrape_interval: 10s
+    metrics_path: /metrics
+    scrape_timeout: 5s
+    honor_labels: true
+    params:
+      format: ['prometheus']
+
+  # Config Center 服务监控
+  - job_name: 'config-center'
+    static_configs:
+      - targets: ['host.docker.internal:8002']
+    scrape_interval: 10s
+    metrics_path: /metrics
+    scrape_timeout: 5s
+    honor_labels: true
+
+  # Marketplace API 服务监控
+  - job_name: 'marketplace-api'
+    static_configs:
+      - targets: ['host.docker.internal:8003']
+    scrape_interval: 10s
+    metrics_path: /metrics
+    scrape_timeout: 5s
+    honor_labels: true
+
+  # PostgreSQL 监控
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+
+  # Redis 监控
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+
+  # Node Exporter (如果有的话)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['host.docker.internal:9100']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # cAdvisor 容器监控
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # 黑盒监控 (健康检查)
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - http://host.docker.internal:8001/health
+        - http://host.docker.internal:8002/health
+        - http://host.docker.internal:8003/health
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+# 远程写入配置 (可选)
+# remote_write:
+#   - url: "http://remote-storage:9201/api/v1/write"
+
+# 远程读取配置 (可选)
+# remote_read:
+#   - url: "http://remote-storage:9201/api/v1/read"
+
+# 存储配置
+storage:
+  tsdb:
+    path: /prometheus
+    retention.time: 7d
+    retention.size: 1GB
+    wal-compression: true
+
+# Web 配置
+web:
+  console.libraries: /etc/prometheus/console_libraries
+  console.templates: /etc/prometheus/consoles
+  enable-lifecycle: true
+  enable-admin-api: true
+  page-title: "Laojun Test Prometheus"
+  external-url: http://localhost:9091
+
+# 日志配置
+log:
+  level: info
+  format: logfmt
+
+# 查询配置
+query:
+  timeout: 2m
+  max-concurrency: 20
+  max-samples: 50000000
+
+# 特征标志
+feature_flags:
+  - promql-at-modifier
+  - remote-write-receiver

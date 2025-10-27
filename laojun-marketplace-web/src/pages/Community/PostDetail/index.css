@@ -1,0 +1,144 @@
+/* 帖子详情页面样式 */
+.post-detail-page {
+  padding: 24px;
+}
+
+/* 移动端和桌面端显示控制 */
+.desktop-only {
+  display: block;
+}
+
+.mobile-only {
+  display: none;
+}
+
+/* 移动端样式 */
+@media (max-width: 768px) {
+  .post-detail-page {
+    padding: 16px;
+  }
+
+  .desktop-only {
+    display: none;
+  }
+
+  .mobile-only {
+    display: block;
+  }
+
+  /* 卡片在移动端的内边距调整 */
+  .post-detail-page .ant-card-body {
+    padding: 16px;
+  }
+
+  /* 标题在移动端的字体大小 */
+  .post-detail-page .ant-typography h2 {
+    font-size: 18px !important;
+    line-height: 1.4;
+    margin-bottom: 12px !important;
+  }
+
+  /* 段落在移动端的字体大小 */
+  .post-detail-page .ant-typography {
+    font-size: 14px;
+  }
+
+  /* 头像在移动端稍小 */
+  .post-detail-page .ant-avatar {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  /* 标签在移动端更紧凑 */
+  .post-detail-page .ant-tag {
+    font-size: 11px;
+    padding: 0 4px;
+    margin: 2px;
+  }
+
+  /* 按钮在移动端的样式 */
+  .post-detail-page .ant-btn {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+
+  /* 回复表单在移动端的优化 */
+  .post-detail-page .ant-form-item {
+    margin-bottom: 16px;
+  }
+
+  .post-detail-page .ant-input {
+    font-size: 14px;
+  }
+
+  /* 回复列表在移动端的优化 */
+  .post-detail-page .ant-list-item {
+    padding: 12px 0;
+  }
+
+  .post-detail-page .ant-list-item-meta-title {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .post-detail-page .ant-list-item-meta-description {
+    font-size: 12px;
+    margin-top: 4px !important;
+  }
+
+  /* 分页在移动端简化 */
+  .post-detail-page .ant-pagination {
+    text-align: center;
+  }
+
+  .post-detail-page .ant-pagination-options {
+    display: none;
+  }
+
+  /* Space 组件在移动端的间距调整 */
+  .post-detail-page .ant-space-item {
+    margin-bottom: 8px;
+  }
+}
+
+/* 中等屏幕优化 */
+@media (max-width: 992px) and (min-width: 769px) {
+  .post-detail-page {
+    padding: 20px;
+  }
+
+  .post-detail-page .ant-typography h2 {
+    font-size: 20px;
+  }
+
+  .post-detail-page .ant-typography {
+    font-size: 15px;
+  }
+}
+
+/* 大屏幕优化 */
+@media (min-width: 1200px) {
+  .post-detail-page {
+    padding: 32px;
+  }
+}
+
+/* 深色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .post-detail-page .ant-card {
+    background-color: #1f1f1f;
+    border-color: #434343;
+  }
+
+  .post-detail-page .ant-list-item {
+    border-bottom-color: #434343;
+  }
+
+  .post-detail-page .ant-breadcrumb a {
+    color: #1890ff;
+  }
+
+  .post-detail-page .ant-breadcrumb a:hover {
+    color: #40a9ff;
+  }
+}

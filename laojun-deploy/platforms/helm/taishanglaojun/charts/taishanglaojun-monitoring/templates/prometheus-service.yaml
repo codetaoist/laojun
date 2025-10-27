@@ -1,0 +1,24 @@
+{{- if .Values.prometheus.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "taishanglaojun-monitoring.fullname" . }}-prometheus
+  namespace: {{ include "taishanglaojun-monitoring.namespace" . }}
+  labels:
+    {{- include "taishanglaojun-monitoring.labels" . | nindent 4 }}
+    app.kubernetes.io/component: prometheus
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+    prometheus.io/path: "/metrics"
+spec:
+  type: {{ .Values.prometheus.service.type }}
+  ports:
+    - port: {{ .Values.prometheus.service.port }}
+      targetPort: 9090
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "taishanglaojun-monitoring.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: prometheus
+{{- end }}

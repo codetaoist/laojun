@@ -1,0 +1,36 @@
+# Config Center Configuration
+server:
+  host: "0.0.0.0"
+  port: 8087
+  readTimeout: 30s
+  writeTimeout: 30s
+
+storage:
+  type: file  # file, redis, database
+  file:
+    basePath: "./etc/laojun"
+    watchDir: true
+  redis:
+    host: localhost
+    port: 6379
+    password: "redis123"
+    db: 1
+  database:
+    host: localhost
+    port: 5432
+    user: laojun
+    password: "laojun123"
+    dbname: laojun_dev
+    sslmode: disable
+
+security:
+  apiKey: ""
+  allowedIPs:
+    - "127.0.0.1"
+    - "::1"
+  enableAuth: false
+
+log:
+  level: info
+  format: json
+  output: stdout

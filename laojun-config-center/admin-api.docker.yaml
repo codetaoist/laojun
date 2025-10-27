@@ -1,0 +1,71 @@
+# Admin API service configuration - Docker环境
+server:
+  host: 0.0.0.0
+  port: 8080
+  cors:
+    enabled: true
+    origins:
+      - "http://localhost"
+      - "http://localhost:3000"
+      - "http://localhost:5173"
+    methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+    headers:
+      - "Content-Type"
+      - "Authorization"
+      - "X-Requested-With"
+
+security:
+  jwtSecret: "laojun-docker-dev-secret-key-2024"
+  jwtExpireHours: 24
+  mfaEnabled: false
+  rateLimitEnabled: true
+
+logging:
+  level: info
+  format: json
+  output: both
+  file: 
+    path: "/app/logs/admin-api.log"
+    maxSize: 100MB
+    maxBackups: 5
+    maxAge: 30
+
+database:
+  postgres:
+    host: postgres
+    port: 5432
+    user: laojun
+    password: "laojun123"
+    dbname: laojun_dev
+    sslmode: disable
+    maxOpenConns: 25
+    maxIdleConns: 5
+    connMaxLifetime: 300s
+  redis:
+    host: redis
+    port: 6379
+    db: 0
+    password: "redis123"
+    poolSize: 10
+    minIdleConns: 5
+
+storage:
+  type: local
+  local:
+    basePath: "/app/uploads"
+    maxFileSize: 10MB
+    allowedTypes:
+      - "image/jpeg"
+      - "image/png"
+      - "image/gif"
+      - "application/pdf"
+
+cache:
+  driver: redis
+  ttl: 3600
+  prefix: "laojun:docker:"

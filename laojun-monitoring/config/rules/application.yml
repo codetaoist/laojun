@@ -1,0 +1,236 @@
+# 应用监控告警规则
+groups:
+  - name: application.rules
+    interval: 30s
+    rules:
+      # HTTP 请求错误率告警
+      - alert: HighHTTPErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) * 100 > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: api
+          category: application
+        annotations:
+          summary: "HTTP错误率过高"
+          description: "实例 {{ $labels.instance }} HTTP 5xx错误率为 {{ $value }}%，已超过5%阈值持续2分钟"
+          value: "{{ $value }}%"
+          threshold: "5%"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/high-http-error-rate"
+
+      - alert: CriticalHTTPErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) * 100 > 20
+        for: 1m
+        labels:
+          severity: critical
+          service: api
+          category: application
+        annotations:
+          summary: "HTTP错误率严重过高"
+          description: "实例 {{ $labels.instance }} HTTP 5xx错误率为 {{ $value }}%，已超过20%阈值持续1分钟"
+          value: "{{ $value }}%"
+          threshold: "20%"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/critical-http-error-rate"
+
+      # HTTP 请求延迟告警
+      - alert: HighHTTPLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+          category: application
+        annotations:
+          summary: "HTTP请求延迟过高"
+          description: "实例 {{ $labels.instance }} HTTP请求95%分位延迟为 {{ $value }}s，已超过1s阈值持续5分钟"
+          value: "{{ $value }}s"
+          threshold: "1s"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/high-http-latency"
+
+      # HTTP 请求量异常告警
+      - alert: LowHTTPRequestRate
+        expr: rate(http_requests_total[5m]) < 1
+        for: 10m
+        labels:
+          severity: warning
+          service: api
+          category: application
+        annotations:
+          summary: "HTTP请求量异常低"
+          description: "实例 {{ $labels.instance }} HTTP请求速率为 {{ $value }}/s，低于正常水平持续10分钟"
+          value: "{{ $value }}/s"
+          threshold: "1/s"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/low-http-request-rate"
+
+      - alert: HighHTTPRequestRate
+        expr: rate(http_requests_total[5m]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+          category: application
+        annotations:
+          summary: "HTTP请求量异常高"
+          description: "实例 {{ $labels.instance }} HTTP请求速率为 {{ $value }}/s，可能遭受攻击或异常流量"
+          value: "{{ $value }}/s"
+          threshold: "1000/s"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/high-http-request-rate"
+
+      # 数据库连接告警
+      - alert: HighDatabaseConnections
+        expr: database_connections_active / database_connections_max * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+          category: application
+        annotations:
+          summary: "数据库连接数过高"
+          description: "实例 {{ $labels.instance }} 数据库连接使用率为 {{ $value }}%，已超过80%阈值持续5分钟"
+          value: "{{ $value }}%"
+          threshold: "80%"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/high-db-connections"
+
+      # 数据库查询延迟告警
+      - alert: HighDatabaseQueryLatency
+        expr: histogram_quantile(0.95, rate(database_query_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+          category: application
+        annotations:
+          summary: "数据库查询延迟过高"
+          description: "实例 {{ $labels.instance }} 数据库查询95%分位延迟为 {{ $value }}s，已超过0.5s阈值持续5分钟"
+          value: "{{ $value }}s"
+          threshold: "0.5s"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/high-db-latency"
+
+      # 缓存命中率告警
+      - alert: LowCacheHitRate
+        expr: cache_hits_total / (cache_hits_total + cache_misses_total) * 100 < 80
+        for: 10m
+        labels:
+          severity: warning
+          service: cache
+          category: application
+        annotations:
+          summary: "缓存命中率过低"
+          description: "实例 {{ $labels.instance }} 缓存命中率为 {{ $value }}%，低于80%阈值持续10分钟"
+          value: "{{ $value }}%"
+          threshold: "80%"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/low-cache-hit-rate"
+
+      # 队列长度告警
+      - alert: HighQueueLength
+        expr: queue_length > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: queue
+          category: application
+        annotations:
+          summary: "队列长度过长"
+          description: "实例 {{ $labels.instance }} 队列 {{ $labels.queue }} 长度为 {{ $value }}，已超过1000阈值持续5分钟"
+          value: "{{ $value }}"
+          threshold: "1000"
+          queue: "{{ $labels.queue }}"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/high-queue-length"
+
+      # 消息处理延迟告警
+      - alert: HighMessageProcessingLatency
+        expr: histogram_quantile(0.95, rate(message_processing_duration_seconds_bucket[5m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: queue
+          category: application
+        annotations:
+          summary: "消息处理延迟过高"
+          description: "实例 {{ $labels.instance }} 消息处理95%分位延迟为 {{ $value }}s，已超过10s阈值持续5分钟"
+          value: "{{ $value }}s"
+          threshold: "10s"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/high-message-latency"
+
+      # 应用内存泄漏告警
+      - alert: MemoryLeak
+        expr: increase(go_memstats_heap_alloc_bytes[1h]) > 100 * 1024 * 1024
+        for: 0s
+        labels:
+          severity: warning
+          service: memory
+          category: application
+        annotations:
+          summary: "可能存在内存泄漏"
+          description: "实例 {{ $labels.instance }} 在过去1小时内堆内存增长了 {{ $value | humanize }}B"
+          value: "{{ $value | humanize }}B"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/memory-leak"
+
+      # Goroutine 数量告警
+      - alert: HighGoroutineCount
+        expr: go_goroutines > 10000
+        for: 5m
+        labels:
+          severity: warning
+          service: runtime
+          category: application
+        annotations:
+          summary: "Goroutine数量过多"
+          description: "实例 {{ $labels.instance }} Goroutine数量为 {{ $value }}，已超过10000阈值持续5分钟"
+          value: "{{ $value }}"
+          threshold: "10000"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/high-goroutine-count"
+
+      # GC 频率告警
+      - alert: HighGCFrequency
+        expr: rate(go_gc_duration_seconds_count[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: runtime
+          category: application
+        annotations:
+          summary: "GC频率过高"
+          description: "实例 {{ $labels.instance }} GC频率为 {{ $value }}/s，已超过10/s阈值持续5分钟"
+          value: "{{ $value }}/s"
+          threshold: "10/s"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/high-gc-frequency"
+
+      # 应用启动时间告警
+      - alert: SlowApplicationStartup
+        expr: time() - process_start_time_seconds < 300 and go_memstats_heap_alloc_bytes == 0
+        for: 0s
+        labels:
+          severity: info
+          service: startup
+          category: application
+        annotations:
+          summary: "应用启动缓慢"
+          description: "实例 {{ $labels.instance }} 应用启动时间超过5分钟"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/slow-startup"
+
+      # 健康检查失败告警
+      - alert: HealthCheckFailed
+        expr: health_check_status == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: health
+          category: application
+        annotations:
+          summary: "健康检查失败"
+          description: "实例 {{ $labels.instance }} 健康检查失败超过1分钟"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/health-check-failed"
+
+      # 版本不一致告警
+      - alert: VersionMismatch
+        expr: count by (version) (application_version) > 1
+        for: 10m
+        labels:
+          severity: warning
+          service: deployment
+          category: application
+        annotations:
+          summary: "应用版本不一致"
+          description: "检测到多个不同版本的应用实例同时运行"
+          runbook_url: "https://wiki.laojun-monitoring.com/runbooks/version-mismatch"

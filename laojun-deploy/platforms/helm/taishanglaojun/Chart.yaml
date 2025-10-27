@@ -1,0 +1,29 @@
+apiVersion: v2
+name: taishanglaojun
+description: 太上老君微服务平台 - 企业级云原生微服务架构
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+home: https://github.com/codetaoist/laojun
+sources:
+- https://github.com/codetaoist/laojun
+maintainers:
+  - name: TaiShang LaoJun Team
+    email: team@taishanglaojun.com
+keywords:
+  - microservices
+  - cloud-native
+  - monitoring
+  - service-discovery
+  - kubernetes
+annotations:
+  category: Infrastructure
+dependencies:
+  - name: taishanglaojun-platform
+    version: "1.0.0"
+    repository: "file://./charts/taishanglaojun-platform"
+    condition: platform.enabled
+  - name: taishanglaojun-monitoring
+    version: "1.0.0"
+    repository: "file://./charts/taishanglaojun-monitoring"
+    condition: monitoring.enabled

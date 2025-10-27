@@ -1,0 +1,53 @@
+# Admin API 配置文件
+# 继承基础配置: configs/base.yaml
+extends: "base.yaml"
+
+app:
+  name: "admin-api"
+  version: "1.0.0"
+  env: "development"
+  debug: true
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  mode: "debug"
+
+# 覆盖基础配置中的数据库设置
+database:
+  host: "localhost"
+  port: 5432
+  username: "laojun"
+  password: "laojun123"
+  dbname: "laojun"
+
+# 覆盖基础配置中的Redis设置
+redis:
+  host: "localhost"
+  port: 6379
+  password: "redis123"
+  db: 0
+
+# 覆盖基础配置中的JWT设置
+jwt:
+  secret: "your-secret-key"
+  expire: 7200
+
+# 覆盖基础配置中的日志设置
+log:
+  level: "debug"
+  filename: "logs/admin-api.log"
+objectStorage:
+  minio:
+    endpoint: "http://localhost:9000"
+    accessKey: "minioadmin"
+    secretKey: "minioadmin"
+    bucket: "laojun"
+# 插件路径说明：运行态数据在 var/lib/laojun/plugins/*
+# 分发归档与模板位于 usr/share/laojun/plugins/
+# 请勿将分发包放入运行态目录
+plugins:
+  installPath: "var/lib/laojun/plugins/installed"
+  cachePath: "var/lib/laojun/plugins/cache"
+  statePath: "var/lib/laojun/plugins/state"
+  allowHotSwap: true

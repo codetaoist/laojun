@@ -1,0 +1,61 @@
+# 基础配置文件 - 所有环境的通用配置
+# 其他配置文件可以继承此配置并覆盖特定设置
+
+# 数据库配置
+database:
+  driver: "mysql"
+  charset: "utf8mb4"
+  parseTime: true
+  loc: "Local"
+  maxIdleConns: 10
+  maxOpenConns: 100
+  connMaxLifetime: "1h"
+
+# Redis配置
+redis:
+  network: "tcp"
+  poolSize: 10
+  minIdleConns: 5
+  maxRetries: 3
+  dialTimeout: "5s"
+  readTimeout: "3s"
+  writeTimeout: "3s"
+
+# 日志配置
+log:
+  level: "info"
+  format: "json"
+  output: "stdout"
+  maxSize: 100
+  maxBackups: 3
+  maxAge: 7
+  compress: true
+
+# 服务器配置
+server:
+  readTimeout: "30s"
+  writeTimeout: "30s"
+  idleTimeout: "60s"
+  maxHeaderBytes: 1048576
+
+# JWT配置
+jwt:
+  algorithm: "HS256"
+  issuer: "laojun"
+
+# 文件上传配置
+upload:
+  maxSize: "10MB"
+  allowedTypes: ["image/jpeg", "image/png", "image/gif", "application/pdf"]
+
+# 安全配置
+security:
+  bcryptCost: 12
+  rateLimitRequests: 100
+  rateLimitWindow: "1m"
+
+# 监控配置
+monitoring:
+  enabled: true
+  metricsPath: "/metrics"
+  healthPath: "/health"

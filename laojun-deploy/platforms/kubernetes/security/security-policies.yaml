@@ -1,0 +1,523 @@
+# 综合安全策略配置
+# 为太上老君微服务平台定义全面的安全策略
+
+# 镜像安全策略
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: taishanglaojun-image-security
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    policy.type: security
+spec:
+  validationFailureAction: enforce
+  background: true
+  rules:
+  - name: check-image-registry
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+          namespaces:
+          - taishanglaojun
+    validate:
+      message: "Images must come from trusted registries"
+      pattern:
+        spec:
+          =(securityContext):
+            =(runAsNonRoot): true
+            =(runAsUser): ">0"
+          containers:
+          - name: "*"
+            image: "ghcr.io/taishanglaojun/*:*"
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: ">0"
+              capabilities:
+                drop:
+                - ALL
+  
+  - name: disallow-latest-tag
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+          namespaces:
+          - taishanglaojun
+    validate:
+      message: "Images must not use 'latest' tag"
+      pattern:
+        spec:
+          containers:
+          - name: "*"
+            image: "!*:latest"
+  
+  - name: require-image-signature
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+          namespaces:
+          - taishanglaojun
+    validate:
+      message: "Images must be signed"
+      anyPattern:
+      - spec:
+          containers:
+          - name: "*"
+            image: "ghcr.io/taishanglaojun/*@sha256:*"
+---
+# 资源配额和限制策略
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: taishanglaojun-resource-limits
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    policy.type: resource
+spec:
+  validationFailureAction: enforce
+  background: true
+  rules:
+  - name: require-resource-limits
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+          namespaces:
+          - taishanglaojun
+    validate:
+      message: "Resource limits and requests are required"
+      pattern:
+        spec:
+          containers:
+          - name: "*"
+            resources:
+              limits:
+                memory: "?*"
+                cpu: "?*"
+              requests:
+                memory: "?*"
+                cpu: "?*"
+  
+  - name: limit-resource-usage
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+          namespaces:
+          - taishanglaojun
+    validate:
+      message: "Resource limits exceed maximum allowed values"
+      deny:
+        conditions:
+        - key: "{{ request.object.spec.containers[?contains(@.resources.limits.memory, 'Gi')] | length(@) }}"
+          operator: GreaterThan
+          value: 0
+        - key: "{{ request.object.spec.containers[?to_number(@.resources.limits.memory | split(@, 'Gi')[0]) > `4`] | length(@) }}"
+          operator: GreaterThan
+          value: 0
+---
+# 网络安全策略
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: taishanglaojun-network-security
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    policy.type: network
+spec:
+  validationFailureAction: enforce
+  background: true
+  rules:
+  - name: require-network-policy
+    match:
+      any:
+      - resources:
+          kinds:
+          - Namespace
+          names:
+          - taishanglaojun
+    generate:
+      kind: NetworkPolicy
+      name: default-deny-all
+      namespace: "{{request.object.metadata.name}}"
+      data:
+        spec:
+          podSelector: {}
+          policyTypes:
+          - Ingress
+          - Egress
+  
+  - name: disallow-host-network
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+          namespaces:
+          - taishanglaojun
+    validate:
+      message: "Host network is not allowed"
+      pattern:
+        spec:
+          =(hostNetwork): false
+          =(hostPID): false
+          =(hostIPC): false
+---
+# 数据保护策略
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: taishanglaojun-data-protection
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    policy.type: data
+spec:
+  validationFailureAction: enforce
+  background: true
+  rules:
+  - name: encrypt-secrets
+    match:
+      any:
+      - resources:
+          kinds:
+          - Secret
+          namespaces:
+          - taishanglaojun
+    mutate:
+      patchStrategicMerge:
+        metadata:
+          annotations:
+            encryption.kubernetes.io/provider: "aescbc"
+  
+  - name: require-pvc-encryption
+    match:
+      any:
+      - resources:
+          kinds:
+          - PersistentVolumeClaim
+          namespaces:
+          - taishanglaojun
+    validate:
+      message: "PVC must use encrypted storage class"
+      pattern:
+        spec:
+          storageClassName: "encrypted-*"
+  
+  - name: backup-annotation
+    match:
+      any:
+      - resources:
+          kinds:
+          - PersistentVolumeClaim
+          namespaces:
+          - taishanglaojun
+    mutate:
+      patchStrategicMerge:
+        metadata:
+          annotations:
+            backup.kubernetes.io/enabled: "true"
+            backup.kubernetes.io/schedule: "0 2 * * *"
+---
+# 合规性策略
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: taishanglaojun-compliance
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    policy.type: compliance
+spec:
+  validationFailureAction: enforce
+  background: true
+  rules:
+  - name: require-labels
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Service
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+          namespaces:
+          - taishanglaojun
+    validate:
+      message: "Required labels are missing"
+      pattern:
+        metadata:
+          labels:
+            app.kubernetes.io/name: "?*"
+            app.kubernetes.io/version: "?*"
+            app.kubernetes.io/component: "?*"
+            app.kubernetes.io/part-of: "taishanglaojun"
+  
+  - name: require-annotations
+    match:
+      any:
+      - resources:
+          kinds:
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+          namespaces:
+          - taishanglaojun
+    validate:
+      message: "Required annotations are missing"
+      pattern:
+        metadata:
+          annotations:
+            deployment.kubernetes.io/revision: "?*"
+            kubernetes.io/change-cause: "?*"
+  
+  - name: audit-trail
+    match:
+      any:
+      - resources:
+          kinds:
+          - Secret
+          - ConfigMap
+          namespaces:
+          - taishanglaojun
+    mutate:
+      patchStrategicMerge:
+        metadata:
+          annotations:
+            audit.kubernetes.io/created-by: "{{request.userInfo.username}}"
+            audit.kubernetes.io/created-at: "{{request.object.metadata.creationTimestamp}}"
+---
+# 漏洞扫描策略
+apiVersion: aquasecurity.github.io/v1alpha1
+kind: VulnerabilityReport
+metadata:
+  name: taishanglaojun-vuln-scan
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+spec:
+  scanner:
+    name: Trivy
+    vendor: Aqua Security
+    version: "0.35.0"
+  registry:
+    server: ghcr.io
+  artifact:
+    repository: taishanglaojun/laojun-discovery
+    tag: latest
+  summary:
+    criticalCount: 0
+    highCount: 0
+    mediumCount: 0
+    lowCount: 0
+    unknownCount: 0
+---
+# 配置漂移检测
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: taishanglaojun-drift-detection
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    policy.type: drift
+spec:
+  validationFailureAction: audit
+  background: true
+  rules:
+  - name: detect-config-drift
+    match:
+      any:
+      - resources:
+          kinds:
+          - ConfigMap
+          - Secret
+          namespaces:
+          - taishanglaojun
+    validate:
+      message: "Configuration drift detected"
+      deny:
+        conditions:
+        - key: "{{request.object.metadata.annotations.\"config.kubernetes.io/checksum\"}}"
+          operator: NotEquals
+          value: "{{request.oldObject.metadata.annotations.\"config.kubernetes.io/checksum\"}}"
+---
+# 运行时安全策略
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: falco-runtime-security
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: falco
+data:
+  runtime_rules.yaml: |
+    # 运行时安全规则
+    
+    # 检测异常进程执行
+    - rule: Suspicious Process Execution
+      desc: Detect suspicious process execution in containers
+      condition: >
+        spawned_process and container and
+        k8s.ns.name = "taishanglaojun" and
+        (proc.name in (suspicious_binaries) or
+         proc.cmdline contains "wget" or
+         proc.cmdline contains "curl" or
+         proc.cmdline contains "nc" or
+         proc.cmdline contains "ncat")
+      output: >
+        Suspicious process executed (user=%user.name command=%proc.cmdline 
+        container=%container.name image=%container.image.repository 
+        pod=%k8s.pod.name namespace=%k8s.ns.name)
+      priority: HIGH
+      tags: [runtime, process, mitre_execution]
+    
+    # 检测文件系统修改
+    - rule: Unexpected File Modification
+      desc: Detect unexpected file modifications
+      condition: >
+        modify and container and
+        k8s.ns.name = "taishanglaojun" and
+        fd.name startswith "/etc/" and
+        not proc.name in (allowed_file_writers)
+      output: >
+        Unexpected file modification (user=%user.name file=%fd.name 
+        command=%proc.cmdline container=%container.name 
+        pod=%k8s.pod.name namespace=%k8s.ns.name)
+      priority: WARNING
+      tags: [runtime, filesystem, mitre_persistence]
+    
+    # 检测网络异常
+    - rule: Unexpected Network Activity
+      desc: Detect unexpected network connections
+      condition: >
+        (inbound or outbound) and container and
+        k8s.ns.name = "taishanglaojun" and
+        not fd.sport in (allowed_ports) and
+        not fd.dport in (allowed_ports)
+      output: >
+        Unexpected network activity (user=%user.name connection=%fd.name 
+        direction=%evt.type container=%container.name 
+        pod=%k8s.pod.name namespace=%k8s.ns.name)
+      priority: NOTICE
+      tags: [runtime, network, mitre_command_and_control]
+    
+    # 自定义列表和宏
+    - list: suspicious_binaries
+      items: [bash, sh, zsh, fish, nc, ncat, socat, telnet, ssh]
+    
+    - list: allowed_file_writers
+      items: [go, prometheus, grafana, jaeger]
+    
+    - list: allowed_ports
+      items: [80, 443, 8080, 8500, 6379, 9090, 3000, 16686, 53]
+---
+# 安全基线检查
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: taishanglaojun-security-baseline
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    job.type: security
+spec:
+  schedule: "0 3 * * *"  # 每天凌晨3点执行
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: taishanglaojun-security-baseline
+        spec:
+          serviceAccountName: taishanglaojun-admin
+          restartPolicy: OnFailure
+          containers:
+          - name: security-baseline
+            image: aquasec/kube-bench:latest
+            command:
+            - /bin/bash
+            - -c
+            - |
+              # CIS Kubernetes 基线检查
+              echo "Starting CIS Kubernetes Benchmark..."
+              kube-bench run --targets node,policies,managedservices --json > /tmp/cis-report.json
+              
+              # 检查结果并发送告警
+              FAILED_CHECKS=$(cat /tmp/cis-report.json | jq '.Totals.total_fail')
+              if [ "$FAILED_CHECKS" -gt 0 ]; then
+                echo "Security baseline check failed: $FAILED_CHECKS checks failed"
+                # 发送告警到监控系统
+                curl -X POST http://prometheus.taishanglaojun.svc.cluster.local:9090/api/v1/alerts \
+                  -H "Content-Type: application/json" \
+                  -d "{\"alerts\":[{\"labels\":{\"alertname\":\"SecurityBaselineFailure\",\"severity\":\"critical\",\"namespace\":\"taishanglaojun\"},\"annotations\":{\"summary\":\"Security baseline check failed\",\"description\":\"$FAILED_CHECKS CIS checks failed\"}}]}"
+              else
+                echo "Security baseline check passed"
+              fi
+              
+              # 上传报告到存储
+              kubectl create configmap security-baseline-report-$(date +%Y%m%d) \
+                --from-file=/tmp/cis-report.json \
+                --dry-run=client -o yaml | kubectl apply -f -
+            volumeMounts:
+            - name: var-lib-etcd
+              mountPath: /var/lib/etcd
+              readOnly: true
+            - name: var-lib-kubelet
+              mountPath: /var/lib/kubelet
+              readOnly: true
+            - name: etc-systemd
+              mountPath: /etc/systemd
+              readOnly: true
+            - name: etc-kubernetes
+              mountPath: /etc/kubernetes
+              readOnly: true
+            - name: usr-bin
+              mountPath: /usr/local/mount-from-host/bin
+              readOnly: true
+          volumes:
+          - name: var-lib-etcd
+            hostPath:
+              path: "/var/lib/etcd"
+          - name: var-lib-kubelet
+            hostPath:
+              path: "/var/lib/kubelet"
+          - name: etc-systemd
+            hostPath:
+              path: "/etc/systemd"
+          - name: etc-kubernetes
+            hostPath:
+              path: "/etc/kubernetes"
+          - name: usr-bin
+            hostPath:
+              path: "/usr/bin"
+          securityContext:
+            runAsNonRoot: false  # 需要 root 权限进行系统检查
+            runAsUser: 0
+          nodeSelector:
+            kubernetes.io/os: linux

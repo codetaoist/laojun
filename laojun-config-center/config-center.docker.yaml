@@ -1,0 +1,41 @@
+# Config Center Configuration - Docker环境
+server:
+  host: "0.0.0.0"
+  port: 8087
+  readTimeout: 30s
+  writeTimeout: 30s
+
+storage:
+  type: file  # file, redis, database
+  file:
+    basePath: "/app/etc/laojun"
+    watchDir: true
+  redis:
+    host: redis
+    port: 6379
+    password: "redis123"
+    db: 1
+  database:
+    host: postgres
+    port: 5432
+    user: laojun
+    password: "laojun123"
+    dbname: laojun_dev
+    sslmode: disable
+
+security:
+  apiKey: "docker-dev-api-key"
+  allowedIPs:
+    - "172.20.0.0/16"  # Docker网络
+    - "127.0.0.1"
+    - "::1"
+
+logging:
+  level: info
+  format: json
+  output: both  # console, file, both
+  file:
+    path: "/app/logs/config-center.log"
+    maxSize: 100MB
+    maxBackups: 5
+    maxAge: 30

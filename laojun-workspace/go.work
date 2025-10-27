@@ -1,0 +1,12 @@
+go 1.21
+
+use (
+	..\laojun-admin-api
+	..\laojun-config-center
+	..\laojun-discovery
+	..\laojun-gateway
+	..\laojun-marketplace-api
+	..\laojun-monitoring
+	..\laojun-plugins
+	..\laojun-shared
+)

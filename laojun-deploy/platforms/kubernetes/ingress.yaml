@@ -1,0 +1,287 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: taishanglaojun-ingress
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: taishanglaojun-ingress
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/part-of: taishanglaojun-platform
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api.taishanglaojun.local
+      http:
+        paths:
+          - path: /discovery
+            pathType: Prefix
+            backend:
+              service:
+                name: laojun-discovery
+                port:
+                  number: 8081
+          - path: /monitoring
+            pathType: Prefix
+            backend:
+              service:
+                name: laojun-monitoring
+                port:
+                  number: 8082
+    - host: taishanglaojun.local
+      http:
+        paths:
+          - path: /api/discovery
+            pathType: Prefix
+            backend:
+              service:
+                name: laojun-discovery
+                port:
+                  number: 8081
+          - path: /api/monitoring
+            pathType: Prefix
+            backend:
+              service:
+                name: laojun-monitoring
+                port:
+                  number: 8082
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: taishanglaojun-monitoring-ingress
+  namespace: taishanglaojun-monitoring
+  labels:
+    app.kubernetes.io/name: taishanglaojun-monitoring-ingress
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: taishanglaojun-platform
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: monitoring-auth
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required - Monitoring"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: monitoring.taishanglaojun.local
+      http:
+        paths:
+          - path: /prometheus
+            pathType: Prefix
+            backend:
+              service:
+                name: prometheus
+                port:
+                  number: 9090
+          - path: /grafana
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 3000
+          - path: /jaeger
+            pathType: Prefix
+            backend:
+              service:
+                name: jaeger
+                port:
+                  number: 16686
+          - path: /kibana
+            pathType: Prefix
+            backend:
+              service:
+                name: kibana
+                port:
+                  number: 5601
+    - host: prometheus.taishanglaojun.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: prometheus
+                port:
+                  number: 9090
+    - host: grafana.taishanglaojun.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 3000
+    - host: jaeger.taishanglaojun.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jaeger
+                port:
+                  number: 16686
+    - host: kibana.taishanglaojun.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kibana
+                port:
+                  number: 5601
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: monitoring-auth
+  namespace: taishanglaojun-monitoring
+  labels:
+    app.kubernetes.io/name: monitoring-auth
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: taishanglaojun-platform
+type: Opaque
+data:
+  # admin:admin123 (htpasswd generated)
+  auth: YWRtaW46JGFwcjEkSDY1dnVhNzAkLnRsT3E4S3VJcUlVRGNGVGJIcC4wLgo=
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: taishanglaojun-network-policy
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: taishanglaojun-network-policy
+    app.kubernetes.io/component: security
+    app.kubernetes.io/part-of: taishanglaojun-platform
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: taishanglaojun-monitoring
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8081
+        - protocol: TCP
+          port: 8082
+        - protocol: TCP
+          port: 6379
+        - protocol: TCP
+          port: 8500
+  egress:
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: taishanglaojun-monitoring
+      ports:
+        - protocol: TCP
+          port: 9090
+        - protocol: TCP
+          port: 3000
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 6379
+        - protocol: TCP
+          port: 8500
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: taishanglaojun-monitoring-network-policy
+  namespace: taishanglaojun-monitoring
+  labels:
+    app.kubernetes.io/name: taishanglaojun-monitoring-network-policy
+    app.kubernetes.io/component: security
+    app.kubernetes.io/part-of: taishanglaojun-platform
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: taishanglaojun
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 9090
+        - protocol: TCP
+          port: 3000
+        - protocol: TCP
+          port: 16686
+        - protocol: TCP
+          port: 5601
+        - protocol: TCP
+          port: 8086
+        - protocol: TCP
+          port: 9200
+  egress:
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: taishanglaojun
+      ports:
+        - protocol: TCP
+          port: 8081
+        - protocol: TCP
+          port: 8082

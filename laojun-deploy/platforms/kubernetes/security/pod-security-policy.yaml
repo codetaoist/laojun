@@ -1,0 +1,396 @@
+# Pod 安全策略配置
+# 为太上老君微服务平台定义 Pod 安全标准
+
+# 严格的 Pod 安全策略
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: taishanglaojun-strict
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+    security.level: strict
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'runtime/default'
+    seccomp.security.alpha.kubernetes.io/defaultProfileName: 'runtime/default'
+    apparmor.security.beta.kubernetes.io/allowedProfileNames: 'runtime/default'
+    apparmor.security.beta.kubernetes.io/defaultProfileName: 'runtime/default'
+spec:
+  # 特权设置
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  
+  # 卷类型限制
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+    - 'hostPath'  # 仅在必要时使用
+  
+  # 主机网络和端口限制
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  hostPorts:
+    - min: 0
+      max: 0  # 禁止使用主机端口
+  
+  # 运行用户限制
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  runAsGroup:
+    rule: 'MustRunAs'
+    ranges:
+      - min: 1000
+        max: 65535
+  
+  # 文件系统限制
+  readOnlyRootFilesystem: true
+  
+  # SELinux 设置
+  seLinux:
+    rule: 'RunAsAny'
+  
+  # 补充组设置
+  supplementalGroups:
+    rule: 'MustRunAs'
+    ranges:
+      - min: 1000
+        max: 65535
+  
+  # FSGroup 设置
+  fsGroup:
+    rule: 'MustRunAs'
+    ranges:
+      - min: 1000
+        max: 65535
+  
+  # 允许的不安全 sysctl
+  allowedUnsafeSysctls: []
+  
+  # 禁止的 sysctl
+  forbiddenSysctls:
+    - '*'
+---
+# 中等安全级别的 Pod 安全策略（用于监控组件）
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: taishanglaojun-monitoring
+  labels:
+    app.kubernetes.io/name: taishanglaojun-monitoring
+    security.level: moderate
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'runtime/default'
+    seccomp.security.alpha.kubernetes.io/defaultProfileName: 'runtime/default'
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  allowedCapabilities:
+    - NET_BIND_SERVICE  # 允许绑定特权端口
+  
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+    - 'hostPath'
+  
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  hostPorts:
+    - min: 0
+      max: 0
+  
+  runAsUser:
+    rule: 'RunAsAny'  # 监控组件可能需要特定用户
+  runAsGroup:
+    rule: 'RunAsAny'
+  
+  readOnlyRootFilesystem: false  # 监控组件可能需要写入
+  
+  seLinux:
+    rule: 'RunAsAny'
+  
+  supplementalGroups:
+    rule: 'RunAsAny'
+  
+  fsGroup:
+    rule: 'RunAsAny'
+  
+  allowedUnsafeSysctls: []
+  forbiddenSysctls:
+    - '*'
+---
+# 数据库组件的 Pod 安全策略
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: taishanglaojun-database
+  labels:
+    app.kubernetes.io/name: taishanglaojun-database
+    security.level: moderate
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  allowedCapabilities:
+    - CHOWN
+    - DAC_OVERRIDE
+    - FOWNER
+    - SETGID
+    - SETUID
+  
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  hostPorts:
+    - min: 0
+      max: 0
+  
+  runAsUser:
+    rule: 'RunAsAny'
+  runAsGroup:
+    rule: 'RunAsAny'
+  
+  readOnlyRootFilesystem: false
+  
+  seLinux:
+    rule: 'RunAsAny'
+  
+  supplementalGroups:
+    rule: 'RunAsAny'
+  
+  fsGroup:
+    rule: 'RunAsAny'
+  
+  allowedUnsafeSysctls: []
+  forbiddenSysctls:
+    - '*'
+---
+# Pod 安全标准（Kubernetes 1.23+）
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: taishanglaojun
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit-version: latest
+    pod-security.kubernetes.io/warn-version: latest
+---
+# 安全上下文约束（OpenShift）
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: taishanglaojun-scc
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+spec:
+  priority: 10
+  allowHostDirVolumePlugin: false
+  allowHostIPC: false
+  allowHostNetwork: false
+  allowHostPID: false
+  allowHostPorts: false
+  allowPrivilegedContainer: false
+  allowedCapabilities: []
+  defaultAddCapabilities: []
+  requiredDropCapabilities:
+    - ALL
+  allowedFlexVolumes: []
+  allowedUnsafeSysctls: []
+  forbiddenSysctls:
+    - '*'
+  fsGroup:
+    type: MustRunAs
+    ranges:
+      - min: 1000
+        max: 65535
+  readOnlyRootFilesystem: true
+  runAsUser:
+    type: MustRunAsNonRoot
+  supplementalGroups:
+    type: MustRunAs
+    ranges:
+      - min: 1000
+        max: 65535
+  volumes:
+    - configMap
+    - downwardAPI
+    - emptyDir
+    - persistentVolumeClaim
+    - projected
+    - secret
+  users: []
+  groups:
+    - system:serviceaccounts:taishanglaojun
+---
+# OPA Gatekeeper 约束模板
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8srequiredsecuritycontext
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sRequiredSecurityContext
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            runAsNonRoot:
+              type: boolean
+            readOnlyRootFilesystem:
+              type: boolean
+            allowPrivilegeEscalation:
+              type: boolean
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8srequiredsecuritycontext
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not container.securityContext.runAsNonRoot
+          msg := "Container must run as non-root user"
+        }
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not container.securityContext.readOnlyRootFilesystem
+          msg := "Container must have read-only root filesystem"
+        }
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          container.securityContext.allowPrivilegeEscalation
+          msg := "Container must not allow privilege escalation"
+        }
+---
+# 应用安全上下文约束
+apiVersion: config.gatekeeper.sh/v1alpha1
+kind: K8sRequiredSecurityContext
+metadata:
+  name: taishanglaojun-security-context
+  labels:
+    app.kubernetes.io/name: taishanglaojun
+spec:
+  match:
+    - apiGroups: ["apps"]
+      kinds: ["Deployment", "DaemonSet", "StatefulSet"]
+      namespaces: ["taishanglaojun"]
+  parameters:
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+---
+# Falco 规则配置
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: falco-rules
+  namespace: taishanglaojun
+  labels:
+    app.kubernetes.io/name: falco
+data:
+  taishanglaojun_rules.yaml: |
+    # 太上老君平台自定义 Falco 规则
+    
+    # 检测特权容器
+    - rule: Privileged Container
+      desc: Detect privileged containers
+      condition: >
+        spawned_process and container and
+        proc.name != "pause" and
+        k8s.pod.name contains "taishanglaojun" and
+        container.privileged=true
+      output: >
+        Privileged container spawned (user=%user.name command=%proc.cmdline 
+        container_id=%container.id container_name=%container.name 
+        image=%container.image.repository:%container.image.tag)
+      priority: WARNING
+      tags: [container, cis, mitre_privilege_escalation]
+    
+    # 检测敏感文件访问
+    - rule: Read sensitive file untrusted
+      desc: Detect reading of sensitive files
+      condition: >
+        open_read and sensitive_files and
+        k8s.pod.name contains "taishanglaojun" and
+        not proc.name in (trusted_binaries)
+      output: >
+        Sensitive file opened for reading by non-trusted program 
+        (user=%user.name command=%proc.cmdline file=%fd.name 
+        container_id=%container.id image=%container.image.repository)
+      priority: WARNING
+      tags: [filesystem, mitre_credential_access]
+    
+    # 检测网络连接异常
+    - rule: Unexpected outbound connection
+      desc: Detect unexpected outbound network connections
+      condition: >
+        outbound and
+        k8s.pod.name contains "taishanglaojun" and
+        not fd.sport in (allowed_outbound_ports) and
+        not fd.sip in (allowed_outbound_ips)
+      output: >
+        Unexpected outbound connection (user=%user.name command=%proc.cmdline 
+        connection=%fd.name container_id=%container.id image=%container.image.repository)
+      priority: NOTICE
+      tags: [network, mitre_command_and_control]
+    
+    # 检测容器逃逸尝试
+    - rule: Container Escape Attempt
+      desc: Detect potential container escape attempts
+      condition: >
+        spawned_process and container and
+        k8s.pod.name contains "taishanglaojun" and
+        (proc.name in (escape_binaries) or
+         proc.cmdline contains "docker" or
+         proc.cmdline contains "runc" or
+         proc.cmdline contains "kubectl")
+      output: >
+        Potential container escape attempt (user=%user.name command=%proc.cmdline 
+        container_id=%container.id image=%container.image.repository)
+      priority: CRITICAL
+      tags: [container, mitre_escape]
+    
+    # 自定义宏和列表
+    - macro: trusted_binaries
+      condition: proc.name in (go, prometheus, grafana, jaeger, consul, redis)
+    
+    - list: allowed_outbound_ports
+      items: [53, 80, 443, 8080, 8500, 6379, 9090, 3000, 16686]
+    
+    - list: allowed_outbound_ips
+      items: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+    
+    - list: escape_binaries
+      items: [docker, runc, kubectl, crictl, ctr]
+    
+    - list: sensitive_files
+      items: [/etc/passwd, /etc/shadow, /etc/hosts, /etc/hostname, /etc/resolv.conf]

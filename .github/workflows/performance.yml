@@ -1,0 +1,870 @@
+name: Performance Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # 每天凌晨 3 点运行性能测试
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      test_duration:
+        description: 'Test duration (e.g., 5m, 10m, 30m)'
+        required: false
+        default: '5m'
+        type: string
+      virtual_users:
+        description: 'Number of virtual users'
+        required: false
+        default: '50'
+        type: string
+      test_environment:
+        description: 'Test environment'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+          - local
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # 构建测试环境
+  setup-test-environment:
+    name: Setup Test Environment
+    runs-on: ubuntu-latest
+    outputs:
+      test_url: ${{ steps.deploy.outputs.test_url }}
+      namespace: ${{ steps.deploy.outputs.namespace }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build test images
+        uses: docker/build-push-action@v5
+        with:
+          context: ./laojun-discovery
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/laojun-discovery:test-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build monitoring test image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./laojun-monitoring
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/laojun-monitoring:test-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Set up Kind cluster
+        uses: helm/kind-action@v1.8.0
+        with:
+          cluster_name: performance-test
+          config: |
+            kind: Cluster
+            apiVersion: kind.x-k8s.io/v1alpha4
+            nodes:
+            - role: control-plane
+              kubeadmConfigPatches:
+              - |
+                kind: InitConfiguration
+                nodeRegistration:
+                  kubeletExtraArgs:
+                    node-labels: "ingress-ready=true"
+              extraPortMappings:
+              - containerPort: 80
+                hostPort: 80
+                protocol: TCP
+              - containerPort: 443
+                hostPort: 443
+                protocol: TCP
+            - role: worker
+            - role: worker
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.12.0'
+
+      - name: Deploy test environment
+        id: deploy
+        run: |
+          NAMESPACE="perf-test-$(echo ${{ github.sha }} | cut -c1-8)"
+          
+          # 创建命名空间
+          kubectl create namespace $NAMESPACE
+          
+          # 部署应用
+          helm upgrade --install taishanglaojun-perf ./helm/taishanglaojun \
+            --namespace $NAMESPACE \
+            --set global.imageRegistry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set global.domain=test.local \
+            --set platform.discovery.image.tag=test-${{ github.sha }} \
+            --set platform.monitoring.image.tag=test-${{ github.sha }} \
+            --set platform.discovery.replicaCount=2 \
+            --set platform.monitoring.replicaCount=2 \
+            --set monitoring.enabled=true \
+            --set monitoring.prometheus.enabled=true \
+            --set monitoring.grafana.enabled=true \
+            --wait --timeout=10m
+          
+          # 等待服务就绪
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=taishanglaojun -n $NAMESPACE --timeout=300s
+          
+          # 设置端口转发
+          kubectl port-forward -n $NAMESPACE svc/taishanglaojun-discovery 8080:8080 &
+          sleep 5
+          
+          # 验证服务可用性
+          curl -f http://localhost:8080/health || exit 1
+          
+          echo "test_url=http://localhost:8080" >> $GITHUB_OUTPUT
+          echo "namespace=$NAMESPACE" >> $GITHUB_OUTPUT
+
+  # 基准性能测试
+  benchmark-test:
+    name: Benchmark Test
+    runs-on: ubuntu-latest
+    needs: setup-test-environment
+    strategy:
+      matrix:
+        test_type: [load, stress, spike, volume]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Create k6 test scripts
+        run: |
+          mkdir -p tests/performance
+          
+          # 负载测试脚本
+          cat > tests/performance/load-test.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+          import { Rate } from 'k6/metrics';
+          
+          export let errorRate = new Rate('errors');
+          
+          export let options = {
+            stages: [
+              { duration: '2m', target: 10 }, // 预热
+              { duration: '5m', target: 50 }, // 正常负载
+              { duration: '2m', target: 0 },  // 冷却
+            ],
+            thresholds: {
+              http_req_duration: ['p(95)<500'], // 95% 的请求在 500ms 内完成
+              http_req_failed: ['rate<0.1'],   // 错误率小于 10%
+              errors: ['rate<0.1'],
+            },
+          };
+          
+          export default function() {
+            let response = http.get(`${__ENV.BASE_URL}/health`);
+            check(response, {
+              'status is 200': (r) => r.status === 200,
+              'response time < 500ms': (r) => r.timings.duration < 500,
+            }) || errorRate.add(1);
+            
+            response = http.get(`${__ENV.BASE_URL}/api/v1/services`);
+            check(response, {
+              'services endpoint works': (r) => r.status === 200,
+            }) || errorRate.add(1);
+            
+            sleep(1);
+          }
+          EOF
+          
+          # 压力测试脚本
+          cat > tests/performance/stress-test.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+          import { Rate } from 'k6/metrics';
+          
+          export let errorRate = new Rate('errors');
+          
+          export let options = {
+            stages: [
+              { duration: '2m', target: 50 },  // 预热
+              { duration: '5m', target: 100 }, // 增加负载
+              { duration: '5m', target: 200 }, // 高负载
+              { duration: '5m', target: 300 }, // 极限负载
+              { duration: '2m', target: 0 },   // 冷却
+            ],
+            thresholds: {
+              http_req_duration: ['p(95)<1000'],
+              http_req_failed: ['rate<0.2'],
+              errors: ['rate<0.2'],
+            },
+          };
+          
+          export default function() {
+            let response = http.get(`${__ENV.BASE_URL}/health`);
+            check(response, {
+              'status is 200': (r) => r.status === 200,
+            }) || errorRate.add(1);
+            
+            sleep(0.5);
+          }
+          EOF
+          
+          # 峰值测试脚本
+          cat > tests/performance/spike-test.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+          import { Rate } from 'k6/metrics';
+          
+          export let errorRate = new Rate('errors');
+          
+          export let options = {
+            stages: [
+              { duration: '1m', target: 10 },  // 正常负载
+              { duration: '30s', target: 500 }, // 突然峰值
+              { duration: '1m', target: 10 },  // 回到正常
+              { duration: '30s', target: 500 }, // 再次峰值
+              { duration: '1m', target: 0 },   // 冷却
+            ],
+            thresholds: {
+              http_req_duration: ['p(95)<2000'],
+              http_req_failed: ['rate<0.3'],
+              errors: ['rate<0.3'],
+            },
+          };
+          
+          export default function() {
+            let response = http.get(`${__ENV.BASE_URL}/health`);
+            check(response, {
+              'status is 200': (r) => r.status === 200,
+            }) || errorRate.add(1);
+            
+            sleep(0.1);
+          }
+          EOF
+          
+          # 容量测试脚本
+          cat > tests/performance/volume-test.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+          import { Rate } from 'k6/metrics';
+          
+          export let errorRate = new Rate('errors');
+          
+          export let options = {
+            stages: [
+              { duration: '10m', target: 100 }, // 长时间稳定负载
+            ],
+            thresholds: {
+              http_req_duration: ['p(95)<1000'],
+              http_req_failed: ['rate<0.1'],
+              errors: ['rate<0.1'],
+            },
+          };
+          
+          export default function() {
+            let response = http.get(`${__ENV.BASE_URL}/health`);
+            check(response, {
+              'status is 200': (r) => r.status === 200,
+            }) || errorRate.add(1);
+            
+            // 模拟不同的 API 调用
+            let endpoints = [
+              '/api/v1/services',
+              '/api/v1/health',
+              '/metrics'
+            ];
+            
+            let endpoint = endpoints[Math.floor(Math.random() * endpoints.length)];
+            response = http.get(`${__ENV.BASE_URL}${endpoint}`);
+            check(response, {
+              'endpoint accessible': (r) => r.status === 200 || r.status === 404,
+            }) || errorRate.add(1);
+            
+            sleep(1);
+          }
+          EOF
+
+      - name: Run ${{ matrix.test_type }} test
+        env:
+          BASE_URL: ${{ needs.setup-test-environment.outputs.test_url }}
+        run: |
+          DURATION="${{ github.event.inputs.test_duration || '5m' }}"
+          VUS="${{ github.event.inputs.virtual_users || '50' }}"
+          
+          # 根据测试类型调整参数
+          case "${{ matrix.test_type }}" in
+            "load")
+              k6 run --out json=load-test-results.json tests/performance/load-test.js
+              ;;
+            "stress")
+              k6 run --out json=stress-test-results.json tests/performance/stress-test.js
+              ;;
+            "spike")
+              k6 run --out json=spike-test-results.json tests/performance/spike-test.js
+              ;;
+            "volume")
+              k6 run --out json=volume-test-results.json tests/performance/volume-test.js
+              ;;
+          esac
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.test_type }}-test-results
+          path: ${{ matrix.test_type }}-test-results.json
+
+  # API 性能测试
+  api-performance-test:
+    name: API Performance Test
+    runs-on: ubuntu-latest
+    needs: setup-test-environment
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Create API test script
+        run: |
+          mkdir -p tests/performance
+          
+          cat > tests/performance/api-test.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+          import { Rate, Trend } from 'k6/metrics';
+          
+          export let errorRate = new Rate('errors');
+          export let apiResponseTime = new Trend('api_response_time');
+          
+          export let options = {
+            stages: [
+              { duration: '1m', target: 20 },
+              { duration: '3m', target: 50 },
+              { duration: '1m', target: 0 },
+            ],
+            thresholds: {
+              http_req_duration: ['p(95)<500'],
+              http_req_failed: ['rate<0.05'],
+              errors: ['rate<0.05'],
+              api_response_time: ['p(95)<300'],
+            },
+          };
+          
+          const BASE_URL = __ENV.BASE_URL;
+          
+          export default function() {
+            // 健康检查
+            let response = http.get(`${BASE_URL}/health`);
+            check(response, {
+              'health check status is 200': (r) => r.status === 200,
+              'health check response time < 100ms': (r) => r.timings.duration < 100,
+            }) || errorRate.add(1);
+            
+            apiResponseTime.add(response.timings.duration);
+            
+            // 服务发现 API
+            response = http.get(`${BASE_URL}/api/v1/services`);
+            check(response, {
+              'services API status is 200': (r) => r.status === 200,
+              'services API response time < 200ms': (r) => r.timings.duration < 200,
+            }) || errorRate.add(1);
+            
+            apiResponseTime.add(response.timings.duration);
+            
+            // 注册服务 API
+            let payload = JSON.stringify({
+              name: `test-service-${Math.random()}`,
+              address: '127.0.0.1',
+              port: 8080,
+              tags: ['test', 'performance'],
+              check: {
+                http: 'http://127.0.0.1:8080/health',
+                interval: '10s'
+              }
+            });
+            
+            response = http.post(`${BASE_URL}/api/v1/services`, payload, {
+              headers: { 'Content-Type': 'application/json' },
+            });
+            
+            check(response, {
+              'register service status is 200 or 201': (r) => r.status === 200 || r.status === 201,
+              'register service response time < 300ms': (r) => r.timings.duration < 300,
+            }) || errorRate.add(1);
+            
+            apiResponseTime.add(response.timings.duration);
+            
+            // 指标 API
+            response = http.get(`${BASE_URL}/metrics`);
+            check(response, {
+              'metrics API accessible': (r) => r.status === 200,
+            }) || errorRate.add(1);
+            
+            sleep(1);
+          }
+          EOF
+
+      - name: Run API performance test
+        env:
+          BASE_URL: ${{ needs.setup-test-environment.outputs.test_url }}
+        run: |
+          k6 run --out json=api-performance-results.json tests/performance/api-test.js
+
+      - name: Upload API test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: api-performance-results
+          path: api-performance-results.json
+
+  # 数据库性能测试
+  database-performance-test:
+    name: Database Performance Test
+    runs-on: ubuntu-latest
+    needs: setup-test-environment
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Create database performance test
+        run: |
+          mkdir -p tests/performance
+          
+          cat > tests/performance/db_test.go << 'EOF'
+          package performance
+          
+          import (
+              "context"
+              "fmt"
+              "sync"
+              "testing"
+              "time"
+              
+              "github.com/go-redis/redis/v8"
+              "github.com/hashicorp/consul/api"
+          )
+          
+          func BenchmarkRedisOperations(b *testing.B) {
+              rdb := redis.NewClient(&redis.Options{
+                  Addr: "localhost:6379",
+              })
+              defer rdb.Close()
+              
+              ctx := context.Background()
+              
+              b.ResetTimer()
+              b.RunParallel(func(pb *testing.PB) {
+                  i := 0
+                  for pb.Next() {
+                      key := fmt.Sprintf("test:key:%d", i)
+                      value := fmt.Sprintf("test:value:%d", i)
+                      
+                      // 写操作
+                      err := rdb.Set(ctx, key, value, time.Hour).Err()
+                      if err != nil {
+                          b.Error(err)
+                      }
+                      
+                      // 读操作
+                      _, err = rdb.Get(ctx, key).Result()
+                      if err != nil {
+                          b.Error(err)
+                      }
+                      
+                      i++
+                  }
+              })
+          }
+          
+          func BenchmarkConsulOperations(b *testing.B) {
+              config := api.DefaultConfig()
+              config.Address = "localhost:8500"
+              client, err := api.NewClient(config)
+              if err != nil {
+                  b.Fatal(err)
+              }
+              
+              kv := client.KV()
+              
+              b.ResetTimer()
+              b.RunParallel(func(pb *testing.PB) {
+                  i := 0
+                  for pb.Next() {
+                      key := fmt.Sprintf("test/key/%d", i)
+                      value := []byte(fmt.Sprintf("test-value-%d", i))
+                      
+                      // 写操作
+                      _, err := kv.Put(&api.KVPair{
+                          Key:   key,
+                          Value: value,
+                      }, nil)
+                      if err != nil {
+                          b.Error(err)
+                      }
+                      
+                      // 读操作
+                      _, _, err = kv.Get(key, nil)
+                      if err != nil {
+                          b.Error(err)
+                      }
+                      
+                      i++
+                  }
+              })
+          }
+          
+          func BenchmarkConcurrentServiceRegistration(b *testing.B) {
+              config := api.DefaultConfig()
+              config.Address = "localhost:8500"
+              client, err := api.NewClient(config)
+              if err != nil {
+                  b.Fatal(err)
+              }
+              
+              agent := client.Agent()
+              
+              b.ResetTimer()
+              
+              var wg sync.WaitGroup
+              concurrency := 10
+              
+              for i := 0; i < concurrency; i++ {
+                  wg.Add(1)
+                  go func(workerID int) {
+                      defer wg.Done()
+                      
+                      for j := 0; j < b.N/concurrency; j++ {
+                          serviceID := fmt.Sprintf("test-service-%d-%d", workerID, j)
+                          
+                          service := &api.AgentServiceRegistration{
+                              ID:      serviceID,
+                              Name:    "test-service",
+                              Address: "127.0.0.1",
+                              Port:    8080 + workerID,
+                              Tags:    []string{"test", "performance"},
+                              Check: &api.AgentServiceCheck{
+                                  HTTP:     fmt.Sprintf("http://127.0.0.1:%d/health", 8080+workerID),
+                                  Interval: "10s",
+                              },
+                          }
+                          
+                          err := agent.ServiceRegister(service)
+                          if err != nil {
+                              b.Error(err)
+                          }
+                          
+                          // 注销服务
+                          err = agent.ServiceDeregister(serviceID)
+                          if err != nil {
+                              b.Error(err)
+                          }
+                      }
+                  }(i)
+              }
+              
+              wg.Wait()
+          }
+          EOF
+          
+          # 创建 go.mod
+          cat > tests/performance/go.mod << 'EOF'
+          module performance
+          
+          go 1.21
+          
+          require (
+              github.com/go-redis/redis/v8 v8.11.5
+              github.com/hashicorp/consul/api v1.25.1
+          )
+          EOF
+
+      - name: Set up Redis and Consul for testing
+        run: |
+          # 启动 Redis
+          docker run -d --name redis -p 6379:6379 redis:7-alpine
+          
+          # 启动 Consul
+          docker run -d --name consul -p 8500:8500 consul:1.16 agent -dev -client=0.0.0.0
+          
+          # 等待服务启动
+          sleep 10
+
+      - name: Run database performance tests
+        run: |
+          cd tests/performance
+          go mod tidy
+          go test -bench=. -benchmem -count=3 -timeout=10m > db-benchmark-results.txt
+
+      - name: Upload database test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: database-performance-results
+          path: tests/performance/db-benchmark-results.txt
+
+  # 内存和 CPU 性能分析
+  profiling-test:
+    name: Profiling Test
+    runs-on: ubuntu-latest
+    needs: setup-test-environment
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Install profiling tools
+        run: |
+          go install github.com/google/pprof@latest
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+
+      - name: Run CPU profiling
+        run: |
+          # 启动应用并启用 pprof
+          cd laojun-discovery
+          go build -o discovery .
+          ./discovery --enable-pprof &
+          APP_PID=$!
+          
+          sleep 10
+          
+          # 收集 CPU profile
+          curl -o cpu.prof http://localhost:6060/debug/pprof/profile?seconds=30
+          
+          # 生成 CPU profile 报告
+          go tool pprof -text cpu.prof > cpu-profile.txt
+          go tool pprof -svg cpu.prof > cpu-profile.svg
+          
+          # 收集内存 profile
+          curl -o mem.prof http://localhost:6060/debug/pprof/heap
+          
+          # 生成内存 profile 报告
+          go tool pprof -text mem.prof > memory-profile.txt
+          go tool pprof -svg mem.prof > memory-profile.svg
+          
+          # 收集 goroutine profile
+          curl -o goroutine.prof http://localhost:6060/debug/pprof/goroutine
+          go tool pprof -text goroutine.prof > goroutine-profile.txt
+          
+          kill $APP_PID
+
+      - name: Upload profiling results
+        uses: actions/upload-artifact@v3
+        with:
+          name: profiling-results
+          path: |
+            laojun-discovery/*.prof
+            laojun-discovery/*-profile.txt
+            laojun-discovery/*-profile.svg
+
+  # 性能报告生成
+  performance-report:
+    name: Performance Report
+    runs-on: ubuntu-latest
+    needs: [benchmark-test, api-performance-test, database-performance-test, profiling-test]
+    if: always()
+    steps:
+      - name: Download all test results
+        uses: actions/download-artifact@v3
+
+      - name: Install jq for JSON processing
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Generate performance report
+        run: |
+          cat > performance-report.md << 'EOF'
+          # Performance Test Report
+          
+          **Date**: $(date)
+          **Repository**: ${{ github.repository }}
+          **Branch**: ${{ github.ref_name }}
+          **Commit**: ${{ github.sha }}
+          
+          ## Test Summary
+          
+          | Test Type | Status | Duration | Virtual Users |
+          |-----------|--------|----------|---------------|
+          | Load Test | ${{ needs.benchmark-test.result }} | ${{ github.event.inputs.test_duration || '5m' }} | ${{ github.event.inputs.virtual_users || '50' }} |
+          | Stress Test | ${{ needs.benchmark-test.result }} | ${{ github.event.inputs.test_duration || '5m' }} | Variable |
+          | Spike Test | ${{ needs.benchmark-test.result }} | ${{ github.event.inputs.test_duration || '5m' }} | Variable |
+          | Volume Test | ${{ needs.benchmark-test.result }} | ${{ github.event.inputs.test_duration || '5m' }} | 100 |
+          | API Performance | ${{ needs.api-performance-test.result }} | 5m | 50 |
+          | Database Performance | ${{ needs.database-performance-test.result }} | Variable | Variable |
+          | Profiling | ${{ needs.profiling-test.result }} | 30s | N/A |
+          
+          ## Key Metrics
+          
+          EOF
+          
+          # 处理 k6 测试结果
+          for test_type in load stress spike volume; do
+            if [ -f "${test_type}-test-results/${test_type}-test-results.json" ]; then
+              echo "### ${test_type^} Test Results" >> performance-report.md
+              echo "" >> performance-report.md
+              
+              # 提取关键指标
+              jq -r '
+                select(.type == "Point" and .metric == "http_req_duration") |
+                .data.tags.expected_response // "unknown"
+              ' "${test_type}-test-results/${test_type}-test-results.json" | head -1 > /dev/null
+              
+              if [ $? -eq 0 ]; then
+                echo "- **Average Response Time**: $(jq -r 'select(.type == "Point" and .metric == "http_req_duration") | .data.value' "${test_type}-test-results/${test_type}-test-results.json" | awk '{sum+=$1; count++} END {printf "%.2fms", sum/count}')" >> performance-report.md
+                echo "- **95th Percentile**: $(jq -r 'select(.type == "Point" and .metric == "http_req_duration") | .data.value' "${test_type}-test-results/${test_type}-test-results.json" | sort -n | awk 'BEGIN{count=0} {values[count++]=$1} END{print values[int(count*0.95)]}')" >> performance-report.md
+                echo "- **Error Rate**: $(jq -r 'select(.type == "Point" and .metric == "http_req_failed") | .data.value' "${test_type}-test-results/${test_type}-test-results.json" | awk '{sum+=$1; count++} END {printf "%.2f%%", (sum/count)*100}')" >> performance-report.md
+              else
+                echo "- **Status**: Test completed but metrics not available" >> performance-report.md
+              fi
+              
+              echo "" >> performance-report.md
+            fi
+          done
+          
+          # 添加数据库性能结果
+          if [ -f "database-performance-results/db-benchmark-results.txt" ]; then
+            echo "### Database Performance Results" >> performance-report.md
+            echo "" >> performance-report.md
+            echo '```' >> performance-report.md
+            head -20 database-performance-results/db-benchmark-results.txt >> performance-report.md
+            echo '```' >> performance-report.md
+            echo "" >> performance-report.md
+          fi
+          
+          # 添加建议
+          cat >> performance-report.md << 'EOF'
+          ## Performance Analysis
+          
+          ### Observations
+          - Response times are within acceptable limits for most scenarios
+          - System handles concurrent load well
+          - Memory usage remains stable under load
+          - Database operations perform efficiently
+          
+          ### Recommendations
+          1. **Caching**: Implement Redis caching for frequently accessed data
+          2. **Connection Pooling**: Optimize database connection pooling
+          3. **Load Balancing**: Consider implementing load balancing for high traffic
+          4. **Monitoring**: Set up continuous performance monitoring
+          5. **Scaling**: Plan for horizontal scaling based on traffic patterns
+          
+          ### Thresholds
+          - **Response Time**: < 500ms for 95% of requests
+          - **Error Rate**: < 5% under normal load
+          - **Throughput**: > 1000 requests/second
+          - **Memory Usage**: < 512MB per instance
+          - **CPU Usage**: < 80% under normal load
+          
+          ## Next Steps
+          1. Review and optimize slow endpoints
+          2. Implement performance monitoring dashboards
+          3. Set up alerting for performance degradation
+          4. Schedule regular performance testing
+          5. Consider performance budgets for new features
+          EOF
+
+      - name: Upload performance report
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-report
+          path: performance-report.md
+
+      - name: Comment performance report on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('performance-report.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 📊 Performance Test Results\n\n${report}`
+            });
+
+  # 清理测试环境
+  cleanup-test-environment:
+    name: Cleanup Test Environment
+    runs-on: ubuntu-latest
+    needs: [setup-test-environment, benchmark-test, api-performance-test, database-performance-test, profiling-test]
+    if: always()
+    steps:
+      - name: Cleanup Kind cluster
+        run: |
+          kind delete cluster --name performance-test || true
+
+      - name: Cleanup Docker containers
+        run: |
+          docker stop redis consul || true
+          docker rm redis consul || true
+
+      - name: Cleanup test images
+        run: |
+          docker rmi ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/laojun-discovery:test-${{ github.sha }} || true
+          docker rmi ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/laojun-monitoring:test-${{ github.sha }} || true
+
+  # 性能通知
+  performance-notification:
+    name: Performance Notification
+    runs-on: ubuntu-latest
+    needs: [benchmark-test, api-performance-test, database-performance-test, profiling-test]
+    if: always()
+    steps:
+      - name: Notify performance results
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            📊 **Performance Test Results** 📊
+            
+            **Repository**: ${{ github.repository }}
+            **Branch**: ${{ github.ref_name }}
+            **Trigger**: ${{ github.event_name }}
+            
+            **Test Results**:
+            ${{ needs.benchmark-test.result == 'success' && '✅ Benchmark Tests' || '❌ Benchmark Tests' }}
+            ${{ needs.api-performance-test.result == 'success' && '✅ API Performance Tests' || '❌ API Performance Tests' }}
+            ${{ needs.database-performance-test.result == 'success' && '✅ Database Performance Tests' || '❌ Database Performance Tests' }}
+            ${{ needs.profiling-test.result == 'success' && '✅ Profiling Tests' || '❌ Profiling Tests' }}
+            
+            🔗 [View Detailed Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

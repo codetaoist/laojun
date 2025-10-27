@@ -1,0 +1,446 @@
+# 太上老君微服务平台 Helm Chart 配置
+
+# 全局配置
+global:
+  # 镜像仓库配置
+  imageRegistry: ""
+  imagePullSecrets: []
+  
+  # 存储类配置
+  storageClass: ""
+  
+  # 网络配置
+  domain: "taishanglaojun.local"
+  
+  # 安全配置
+  security:
+    enabled: true
+    networkPolicies: true
+    podSecurityPolicy: false
+
+# 平台服务配置
+platform:
+  enabled: true
+  
+  # 服务发现组件
+  discovery:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: taishanglaojun/laojun-discovery
+      tag: "1.0.0"
+      pullPolicy: IfNotPresent
+    
+    service:
+      type: ClusterIP
+      port: 8081
+      metricsPort: 9090
+    
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    
+    autoscaling:
+      enabled: false
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 80
+  
+  # 监控组件
+  monitoring:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: taishanglaojun/laojun-monitoring
+      tag: "1.0.0"
+      pullPolicy: IfNotPresent
+    
+    service:
+      type: ClusterIP
+      port: 8082
+      metricsPort: 9091
+    
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    
+    autoscaling:
+      enabled: false
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 80
+
+# 基础设施服务配置
+infrastructure:
+  # Redis 配置
+  redis:
+    enabled: true
+    replicaCount: 1
+    image:
+      repository: redis
+      tag: "7-alpine"
+      pullPolicy: IfNotPresent
+    
+    auth:
+      enabled: false
+      password: ""
+    
+    persistence:
+      enabled: true
+      size: 8Gi
+    
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+  
+  # Consul 配置
+  consul:
+    enabled: true
+    replicaCount: 3
+    image:
+      repository: consul
+      tag: "1.17"
+      pullPolicy: IfNotPresent
+    
+    persistence:
+      enabled: true
+      size: 10Gi
+    
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+# 监控栈配置
+monitoring:
+  enabled: true
+  
+  # Prometheus 配置
+  prometheus:
+    enabled: true
+    replicaCount: 1
+    image:
+      repository: prom/prometheus
+      tag: "v2.48.0"
+      pullPolicy: IfNotPresent
+    
+    persistence:
+      enabled: true
+      size: 50Gi
+    
+    retention: "30d"
+    
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    
+    # 外部访问配置
+    ingress:
+      enabled: true
+      className: "nginx"
+      annotations:
+        nginx.ingress.kubernetes.io/auth-type: basic
+        nginx.ingress.kubernetes.io/auth-secret: monitoring-auth
+      hosts:
+        - host: prometheus.taishanglaojun.local
+          paths:
+            - path: /
+              pathType: Prefix
+  
+  # Grafana 配置
+  grafana:
+    enabled: true
+    replicaCount: 1
+    image:
+      repository: grafana/grafana
+      tag: "10.2.0"
+      pullPolicy: IfNotPresent
+    
+    admin:
+      username: admin
+      password: admin123
+    
+    persistence:
+      enabled: true
+      size: 10Gi
+    
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    
+    # 外部访问配置
+    ingress:
+      enabled: true
+      className: "nginx"
+      hosts:
+        - host: grafana.taishanglaojun.local
+          paths:
+            - path: /
+              pathType: Prefix
+  
+  # Jaeger 配置
+  jaeger:
+    enabled: true
+    replicaCount: 1
+    image:
+      repository: jaegertracing/all-in-one
+      tag: "1.51"
+      pullPolicy: IfNotPresent
+    
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    
+    # 外部访问配置
+    ingress:
+      enabled: true
+      className: "nginx"
+      hosts:
+        - host: jaeger.taishanglaojun.local
+          paths:
+            - path: /
+              pathType: Prefix
+  
+  # InfluxDB 配置
+  influxdb:
+    enabled: true
+    replicaCount: 1
+    image:
+      repository: influxdb
+      tag: "2.7"
+      pullPolicy: IfNotPresent
+    
+    auth:
+      admin:
+        username: admin
+        password: admin123
+        org: taishanglaojun
+        bucket: metrics
+    
+    persistence:
+      enabled: true
+      size: 50Gi
+    
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  
+  # Elasticsearch 配置
+  elasticsearch:
+    enabled: true
+    replicaCount: 1
+    image:
+      repository: elasticsearch
+      tag: "8.11.0"
+      pullPolicy: IfNotPresent
+    
+    persistence:
+      enabled: true
+      size: 30Gi
+    
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+  
+  # Kibana 配置
+  kibana:
+    enabled: true
+    replicaCount: 1
+    image:
+      repository: kibana
+      tag: "8.11.0"
+      pullPolicy: IfNotPresent
+    
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+    
+    # 外部访问配置
+    ingress:
+      enabled: true
+      className: "nginx"
+      hosts:
+        - host: kibana.taishanglaojun.local
+          paths:
+            - path: /
+              pathType: Prefix
+
+# Ingress 配置
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  
+  # 主平台入口
+  platform:
+    enabled: true
+    hosts:
+      - host: api.taishanglaojun.local
+        paths:
+          - path: /discovery
+            pathType: Prefix
+            service: laojun-discovery
+            port: 8081
+          - path: /monitoring
+            pathType: Prefix
+            service: laojun-monitoring
+            port: 8082
+      - host: taishanglaojun.local
+        paths:
+          - path: /discovery
+            pathType: Prefix
+            service: laojun-discovery
+            port: 8081
+          - path: /monitoring
+            pathType: Prefix
+            service: laojun-monitoring
+            port: 8082
+  
+  # 监控入口
+  monitoring:
+    enabled: true
+    annotations:
+      nginx.ingress.kubernetes.io/auth-type: basic
+      nginx.ingress.kubernetes.io/auth-secret: monitoring-auth
+    hosts:
+      - host: monitoring.taishanglaojun.local
+        paths:
+          - path: /prometheus
+            pathType: Prefix
+            service: prometheus
+            port: 9090
+          - path: /grafana
+            pathType: Prefix
+            service: grafana
+            port: 3000
+          - path: /jaeger
+            pathType: Prefix
+            service: jaeger
+            port: 16686
+          - path: /kibana
+            pathType: Prefix
+            service: kibana
+            port: 5601
+
+# 网络策略配置
+networkPolicies:
+  enabled: true
+  
+  # 平台网络策略
+  platform:
+    enabled: true
+    ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                name: taishanglaojun-monitoring
+        ports:
+          - protocol: TCP
+            port: 9090
+          - protocol: TCP
+            port: 9091
+  
+  # 监控网络策略
+  monitoring:
+    enabled: true
+    ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                name: taishanglaojun
+    egress:
+      - to:
+          - namespaceSelector:
+              matchLabels:
+                name: taishanglaojun
+        ports:
+          - protocol: TCP
+            port: 9090
+          - protocol: TCP
+            port: 9091
+
+# RBAC 配置
+rbac:
+  create: true
+  
+  # ServiceAccount 配置
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+
+# 持久化存储配置
+persistence:
+  # 存储类
+  storageClass: ""
+  
+  # 访问模式
+  accessMode: ReadWriteOnce
+  
+  # 默认大小
+  size: 10Gi
+
+# 安全配置
+security:
+  # Pod 安全策略
+  podSecurityPolicy:
+    enabled: false
+  
+  # 网络策略
+  networkPolicies:
+    enabled: true
+  
+  # 基本认证
+  basicAuth:
+    enabled: true
+    username: admin
+    password: admin123
+
+# 节点选择器
+nodeSelector: {}
+
+# 容忍度
+tolerations: []
+
+# 亲和性
+affinity: {}

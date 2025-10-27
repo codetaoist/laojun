@@ -1,0 +1,50 @@
+# 统一端口配置文件
+# 所有服务的端口都在这里统一管理
+
+services:
+  # 核心业务服务端口 (8080-8099)
+  gateway: 8081          # API网关服务
+  admin_api: 8082        # 后台管理API服务
+  monitoring: 8083       # 监控服务
+  discovery: 8084        # 服务注册与发现
+  plugin_manager: 8085   # 插件管理服务
+  marketplace_api: 8086  # 应用市场API服务
+  config_center: 8087    # 配置管理中心
+
+  # 前端服务端口 (3000-3099)
+  admin_web: 3000        # 管理后台前端
+  marketplace_web: 3001  # 应用市场前端
+
+infra:
+  # 基础设施端口
+  postgresql: 5432       # 主数据库
+  redis: 6379           # 缓存数据库
+  prometheus: 9090      # 监控指标收集
+  grafana: 3000         # 监控面板
+
+# 环境变量覆盖说明
+# 每个服务都可以通过环境变量覆盖默认端口：
+# 
+# 服务端口环境变量：
+# - GATEWAY_PORT=8081
+# - ADMIN_API_PORT=8082
+# - MONITORING_PORT=8083
+# - DISCOVERY_PORT=8084
+# - PLUGIN_MANAGER_PORT=8085
+# - MARKETPLACE_API_PORT=8086
+# - CONFIG_CENTER_PORT=8087
+# - ADMIN_WEB_PORT=3000
+# - MARKETPLACE_WEB_PORT=3001
+#
+# 基础设施端口环境变量：
+# - POSTGRES_PORT=5432
+# - REDIS_PORT=6379
+# - PROMETHEUS_PORT=9090
+# - GRAFANA_PORT=3000
+
+# 端口分配原则：
+# 1. 8080-8099: 核心业务服务
+# 2. 3000-3099: 前端服务
+# 3. 5000-5999: 数据库服务
+# 4. 6000-6999: 缓存服务
+# 5. 9000-9999: 监控相关服务
